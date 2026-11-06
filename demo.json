@@ -1,0 +1,9 @@
+{
+  "rate": 1500,
+  "records": {
+    "agreement-2026-10-03": {"date": "2026-10-03", "text": "Approved fictional Studio website agreement dated October 3, 2026. The project covers a five-page website with a contact form. Online payments and checkout are excluded."},
+    "courtesy-2026-10-10": {"date": "2026-10-10", "text": "On October 10, 2026, the freelancer added a WhatsApp contact button for free as a one-time courtesy. This did not change the approved payment exclusion."},
+    "logo-2026-10-12": {"date": "2026-10-12", "text": "The client chose a navy logo."},
+    "meeting-2026-10-13": {"date": "2026-10-13", "text": "The client moved the review meeting to Thursday."}
+  }
+}

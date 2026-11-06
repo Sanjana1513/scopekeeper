@@ -1,0 +1,221 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScopeKeeper project workbench</title>
+<style>
+body{background:#f6efe6;color:#30232a;font:16px/1.5 system-ui;margin:0}main{max-width:900px;margin:auto;padding:24px}
+section{background:#fffcf8;border:1px solid #dac4cb;border-radius:12px;padding:16px;margin:16px 0}
+label{display:block;margin:8px 0}textarea,input,button,select{font:inherit}textarea{display:block;width:100%;box-sizing:border-box;min-height:85px}
+button{background:#681f35;color:white;border:0;border-radius:6px;padding:7px 12px;margin:6px 6px 6px 0}a{color:#681f35}
+#project-setup{border-left:6px solid var(--client-accent,#681f35)}
+:focus-visible{outline:3px solid #681f35;outline-offset:3px}pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media print{
+  main:has(#quote-print:not([hidden])) > :not(#quote-print){display:none}
+  #quote-print{border:0}
+  #quote-print button{display:none}
+}
+</style>
+<main><section id="quote-print" hidden aria-labelledby="quote-print-title">
+<h2 id="quote-print-title" tabindex="-1">Draft mini-quote</h2>
+<pre id="quote-print-body"></pre>
+<button type="button" id="print-quote">Print or save as PDF</button>
+<button type="button" id="close-quote-print">Close preview</button>
+</section><a href="/">Back to scope review</a><h1>Project workbench</h1>
+<p>Local drafting tools. Drafts and checks are separate from approved project scope.</p>
+<section id="project-setup"><h2>Project setup</h2>
+<p>Profiles are stored in this browser tab. Setup fills draft fields and leaves the demo’s approved scope unchanged.</p>
+<form id="setup-form">
+<fieldset id="setup-identity"><legend>Step 1 of 2 · Project identity</legend>
+<label>Client name <input name="client" maxlength="100" required></label>
+<label>Project name <input name="project" maxlength="100" required></label>
+<button type="button" id="setup-next">Next</button>
+</fieldset>
+<fieldset id="setup-planning" hidden disabled><legend>Step 2 of 2 · Planning details</legend>
+<label>Start date <input name="start" type="date" required></label>
+<label>Planning hourly rate (₹) <input name="rate" type="number" min="0" max="1000000" step="0.01" required></label>
+<label>Client brand accent <input name="accent" type="color" value="#681f35"></label>
+<button type="button" id="setup-back">Back</button><button>Save project profile</button>
+</fieldset>
+</form>
+<label>Saved project <select id="profile-choice"><option value="">Choose a project</option></select></label>
+<button id="apply-profile">Apply to draft fields</button>
+<div id="recent-profiles" aria-label="Recent client projects"></div>
+<p id="setup-status" role="status"></p>
+</section>
+<section><h2>Scope kickoff and statement of work</h2>
+<label>Project type <select id="type"><option value="website">Website</option><option value="app">App</option><option value="design">Design</option><option value="content">Content</option></select></label>
+<button id="template">Load project template</button><pre id="patterns"></pre>
+<form id="sow">
+<label>What is explicitly excluded? <textarea name="excluded" required maxlength="4000"></textarea></label>
+<label>Project name <input name="project" required maxlength="100"></label>
+<label>Included deliverables, one per line <textarea name="deliverables" required maxlength="2000"></textarea></label>
+<button type="button" id="done-suggestions">Suggest acceptance checks</button>
+<label>Acceptance checks <textarea name="acceptance" required maxlength="4000"></textarea></label>
+<label>Delivery date <input name="delivery" type="date" required></label>
+<label>Payment terms <input name="payment" required maxlength="250"></label>
+<label>Included revision rounds <input name="rounds" type="number" min="0" max="100" value="1" required></label>
+<button>Build statement of work</button>
+</form>
+<fieldset><legend>Pre-project scope risk checklist</legend>
+<label><input type="checkbox"> Client approver and approval channel are confirmed</label>
+<label><input type="checkbox"> Dependencies and access owners are documented</label>
+<label><input type="checkbox"> Each deliverable has a measurable acceptance check</label>
+<label><input type="checkbox"> Payment and change approval terms are agreed</label>
+<label><input type="checkbox"> Exclusions and revision rounds are written down</label>
+<output id="risks" aria-live="polite"></output></fieldset>
+<label>Editable statement of work <textarea id="sow-output"></textarea></label><button id="notion-export">Download Markdown for Notion</button><p id="notion-status" role="status"></p>
+</section>
+<section><h2>Contract text review</h2><p>Line-based checks for English text. Review the findings against the full agreement.</p>
+<label>Earlier version <textarea id="old-contract" maxlength="20000"></textarea></label>
+<label>Current version <textarea id="contract" maxlength="20000"></textarea></label>
+<label>Load current contract (.txt, UTF-8) <input id="contract-file" type="file" accept=".txt,text/plain"></label>
+<button id="scan">Check current text</button><button id="compare">Compare versions</button>
+<button id="summary">Summarize scope</button>
+<pre id="contract-result" aria-live="polite"></pre></section>
+<section><h2>Change request form</h2>
+<form id="change-request">
+<label>Project or agreement <input name="project" required maxlength="100"></label>
+<label>Requested by <input name="requester" required maxlength="100"></label>
+<label>Date requested <input name="date" type="date" required></label>
+<label>Requested change <textarea name="change" required maxlength="2000"></textarea></label>
+<label>Business reason <textarea name="reason" required maxlength="1000"></textarea></label>
+<label>Cost and schedule impact <textarea name="impact" required maxlength="1000"></textarea></label>
+<button>Draft change request</button></form>
+<label>Editable change request <textarea id="change-output"></textarea></label>
+</section>
+<section><h2>Draft an amendment</h2><form id="amendment">
+<label>Existing agreement <input name="agreement" required maxlength="150"></label>
+<label>Proposed change <textarea name="change" required maxlength="2000"></textarea></label>
+<label>Cost impact <input name="cost" required maxlength="150"></label>
+<label>Schedule impact <input name="schedule" required maxlength="150"></label>
+<button>Generate amendment draft</button></form>
+<label>Editable amendment <textarea id="amendment-output"></textarea></label></section>
+<section><h2>Late payment reminder</h2><form id="payment-reminder">
+<label>Invoice reference <input name="invoice" required maxlength="100"></label>
+<label>Amount and currency <input name="amount" required maxlength="80"></label>
+<label>Due date <input name="due" type="date" required></label>
+<button>Draft reminder</button></form>
+<label>Editable reminder <textarea id="reminder-output"></textarea></label></section>
+<section><h2>Project notes</h2><p>Saved in this browser tab only. Use fictional or non-sensitive details.</p>
+<form id="project-note"><label>Project name <input name="project" required maxlength="100"></label>
+<label>Note type <select name="kind"><option value="consent">Recording consent</option><option value="lesson">Lesson learned</option></select></label>
+<label>Event date <input name="date" type="date" required></label>
+<label>What was agreed or learned? <textarea name="note" maxlength="600" required></textarea></label>
+<button>Save note</button></form><p id="note-status" role="status"></p><div id="project-notes"></div></section>
+<section><h2>Billing planner</h2>
+<p>All amounts use INR. The planner is separate from the project verdict and approved quote.</p>
+<form id="billing">
+<label>Billing mode <select name="mode"><option value="fixed">Fixed price</option><option value="retainer">Monthly retainer</option></select></label>
+<label>Fixed price or monthly fee (₹) <input name="fee" type="number" min="0" max="100000000" step="0.01" required></label>
+<label>Months in retainer <input name="months" type="number" min="1" max="120" value="1" required></label>
+<label>Expected project cost (₹) <input name="cost" type="number" min="0" max="100000000" step="0.01" required></label>
+<button>Compare billing totals</button><output id="billing-output" aria-live="polite"></output>
+</form>
+<form id="rate-card"><h3>Rate card by work type</h3>
+<label>Design hourly rate <input name="design" type="number" min="0" max="1000000" step="0.01" required></label>
+<label>Development hourly rate <input name="development" type="number" min="0" max="1000000" step="0.01" required></label>
+<label>Support hourly rate <input name="support" type="number" min="0" max="1000000" step="0.01" required></label>
+<label>Work type <select name="work"><option value="design">Design</option><option value="development">Development</option><option value="support">Support</option></select></label>
+<label>Hours <input name="hours" type="number" min="0" max="10000" step="0.01" required></label>
+<button>Price work</button><output id="rate-output" aria-live="polite"></output></form>
+<form id="profit-tracker"><h3>Project profit tracker</h3>
+<label>Entry type <select name="kind"><option value="income">Payment received</option><option value="recovered">Out-of-scope payment received</option><option value="cost">Cost paid</option></select></label>
+<label>Amount (₹) <input name="amount" type="number" min="0.01" max="100000000" step="0.01" required></label>
+<label>Reference <input name="reference" required maxlength="100"></label>
+<button>Add entry</button></form>
+<p>Entries are kept in this browser tab.</p><output id="profit-output" aria-live="polite"></output><ul id="profit-entries"></ul>
+</section>
+<section><h2>Quote tracker and milestone billing</h2>
+<p>Records are kept in this tab. Follow-up alerts appear here while the workbench is open. No messages are sent.</p>
+<form id="quote-tracker">
+<label>Quote reference <input name="reference" required maxlength="100"></label>
+<label>Follow-up date for an unanswered quote <input name="followup" type="date" required></label>
+<label>Billing milestones (one per line, name followed by | and INR amount)
+<textarea name="milestones" maxlength="1600" required placeholder="Design approval | 5000&#10;Website launch | 10000"></textarea></label>
+<button>Add quote</button>
+</form>
+<p id="quote-status" role="status"></p><div id="quote-list"></div></section>
+<section><h2>Billable and courtesy work log</h2>
+<p>Log work already performed. Courtesy value is an estimate based on the rate you enter. Records stay in this browser tab.</p>
+<form id="work-log">
+<label>Work date <input name="date" type="date" required></label>
+<label>Reference <input name="reference" required maxlength="100"></label>
+<label>Work type <select name="kind"><option value="billable">Billable</option><option value="courtesy">Courtesy</option></select></label>
+<label>Hours <input name="hours" type="number" min="0.01" max="10000" step="0.01" required></label>
+<label>Reference hourly rate (₹) <input name="rate" type="number" min="0" max="1000000" step="0.01" required></label>
+<button>Log completed work</button>
+</form>
+<p id="work-log-status" role="status"></p>
+<label>Report month <input id="work-log-month" type="month"></label>
+<output id="work-log-totals" aria-live="polite"></output><p id="work-log-report"></p>
+<label>Weekly digest start date <input id="digest-start" type="date"></label>
+<output id="weekly-digest" aria-live="polite"></output><p id="courtesy-alert" role="status"></p>
+<form id="courtesy-goal"><h3>Courtesy-hours reduction goal</h3>
+<label>Baseline month <input name="baseline" type="month" required></label>
+<label>Reduction target (%) <input name="reduction" type="number" min="0" max="100" step="1" required></label>
+<button>Compare with report month</button><output aria-live="polite"></output></form><ul id="work-log-list"></ul>
+</section>
+<section><h2>Neutral dispute summary</h2>
+<p>Enter each side’s position in their own words. The draft attributes each position and separates agreed facts from open issues.</p>
+<form id="neutral-summary">
+<label>Client position <textarea name="client" required maxlength="2000"></textarea></label>
+<label>Freelancer position <textarea name="freelancer" required maxlength="2000"></textarea></label>
+<label>Agreed facts <textarea name="facts" required maxlength="2000" placeholder="Enter None agreed if needed"></textarea></label>
+<label>Unresolved questions <textarea name="questions" required maxlength="2000"></textarea></label>
+<button>Build neutral summary</button></form>
+<label>Editable neutral summary <textarea id="neutral-output"></textarea></label></section>
+<section><h2>Case study draft</h2>
+<form id="case-study"><label>Project <input name="project" required maxlength="100"></label>
+<label>Starting scope and challenge <textarea name="challenge" required maxlength="1600"></textarea></label>
+<label>Evidence and action taken <textarea name="action" required maxlength="1600"></textarea></label>
+<label>Observed result <textarea name="result" required maxlength="1600"></textarea></label>
+<label>Lesson learned <textarea name="lesson" required maxlength="1600"></textarea></label>
+<button>Build case study</button></form>
+<label>Editable case study <textarea id="case-output"></textarea></label>
+<form id="time-saved"><h3>Time-saved estimate</h3>
+<label>Minutes per request without ScopeKeeper <input name="before" type="number" min="0" max="10000" step="0.01" required></label>
+<label>Minutes per request with ScopeKeeper <input name="after" type="number" min="0" max="10000" step="0.01" required></label>
+<label>Number of comparable requests <input name="count" type="number" min="1" max="10000" required></label>
+<button>Estimate time difference</button><output id="time-output" aria-live="polite"></output></form>
+</section>
+<section><h2>Client stakeholders and approval authority</h2>
+<p>Record the people and roles you have verified. Records are kept in this browser tab.</p>
+<form id="stakeholder-form">
+<label>Client <input name="client" maxlength="100" required></label>
+<label>Person <input name="person" maxlength="100" required></label>
+<label>Role <input name="role" maxlength="100" required></label>
+<label>Approval authority <select name="authority"><option value="unknown">Unverified</option><option value="yes">Can approve</option><option value="no">Cannot approve</option></select></label>
+<button>Save stakeholder</button>
+</form>
+<label>Filter stakeholders by client <input id="stakeholder-filter" type="search"></label>
+<p id="stakeholder-status" role="status"></p><ul id="stakeholder-list"></ul>
+<form id="authority-check"><h3>Check who approved a change</h3>
+<label>Client <input name="client" maxlength="100" required></label>
+<label>Person who gave approval <input name="person" maxlength="100" required></label>
+<button>Check authority</button><output id="authority-output" aria-live="polite"></output>
+</form>
+<form id="send-time"><h3>Suggest a send time</h3>
+<label>Client time zone (IANA name) <input name="zone" placeholder="Asia/Kolkata" maxlength="80" required></label>
+<button>Find next weekday at 9:00 AM</button><output id="send-time-output" aria-live="polite"></output>
+</form>
+<p>Uses weekdays in the selected zone. Holidays and individual availability require a separate check.</p>
+</section>
+<section><h2>Deliverable register</h2>
+<p>Tab-local planning records. Register entries do not change the approved scope.</p>
+<form id="deliverables-register">
+<label>Deliverable name <input name="name" maxlength="100" required></label>
+<label>Agreed description or acceptance criteria <textarea name="description" maxlength="500" required></textarea></label>
+<label>Status <select name="status"><option>Planned</option><option>In progress</option><option>Delivered</option><option>Accepted</option></select></label>
+<button>Save deliverable</button></form>
+<p id="deliverable-status" role="status"></p><ul id="deliverable-list"></ul>
+<form id="match-deliverable"><label>Request to match <textarea name="request" maxlength="2000" required></textarea></label>
+<button>Find closest deliverable</button><output id="deliverable-match" aria-live="polite"></output></form>
+</section>
+<section><h2>Feedback</h2><button type="button" id="open-feedback">Give feedback</button>
+<dialog id="feedback-dialog" aria-labelledby="feedback-title"><h3 id="feedback-title">Prepare a feedback report</h3>
+<p>Review your text before sharing. This saves a file on your device.</p>
+<form id="feedback-form">
+<label>Type <select name="category"><option>Bug</option><option>Suggestion</option><option>Question</option></select></label>
+<label>Details <textarea name="details" maxlength="2000" required></textarea></label>
+<button>Download feedback report</button>
+<button type="button" id="close-feedback">Close</button></form><p id="feedback-status" role="status"></p>
+</dialog></section>
+</main><script src="/workbench.js"></script></html>

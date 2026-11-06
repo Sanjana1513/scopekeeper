@@ -1,0 +1,33 @@
+test_http_demo_and_reset (test_scopekeeper.CleanLaunch.test_http_demo_and_reset) ... ok
+test_amendment_proposal_status_does_not_change_scope (test_scopekeeper.Decisions.test_amendment_proposal_status_does_not_change_scope) ... ok
+test_claim_does_not_change_scope (test_scopekeeper.Decisions.test_claim_does_not_change_scope) ... ok
+test_conflicting_amendments_require_review (test_scopekeeper.Decisions.test_conflicting_amendments_require_review) ... ok
+test_existing_deliverable (test_scopekeeper.Decisions.test_existing_deliverable) ... ok
+test_history_links_only_the_approved_provider_to_the_amendment (test_scopekeeper.Decisions.test_history_links_only_the_approved_provider_to_the_amendment) ... ok
+test_known_approval_missing_from_recall (test_scopekeeper.Decisions.test_known_approval_missing_from_recall) ... ok
+test_memory_off_bypasses_recall (test_scopekeeper.Decisions.test_memory_off_bypasses_recall) ... ok
+test_missing_amendment_date_does_not_change_other_provider_verdict (test_scopekeeper.Decisions.test_missing_amendment_date_does_not_change_other_provider_verdict) ... ok
+test_missing_hours_or_rate (test_scopekeeper.Decisions.test_missing_hours_or_rate) ... ok
+test_missing_source_date_requires_review (test_scopekeeper.Decisions.test_missing_source_date_requires_review) ... ok
+test_paraphrase_and_ambiguity (test_scopekeeper.Decisions.test_paraphrase_and_ambiguity) ... ok
+test_provider_breakdown (test_scopekeeper.Decisions.test_provider_breakdown) ... ok
+test_rejects_forged_chunk (test_scopekeeper.Decisions.test_rejects_forged_chunk) ... ok
+test_wrong_project_and_unknown_source (test_scopekeeper.Decisions.test_wrong_project_and_unknown_source) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.116s
+
+OK
+Chat intake assertions passed.
+Planning calculator assertions passed.
+Reply format assertions passed.
+Workbench assertions passed.
+PASS Original Razorpay request: Billable | agreement-2026-10-03
+PASS Approved Razorpay change: Included | amendment-2026-10-14-razorpay
+PASS Stripe after Razorpay approval: Billable | agreement-2026-10-03
+PASS Memory disabled: Needs Review | None
+PASS Unclear request: Needs Review | None
+PASS Baseline contact form: Included | agreement-2026-10-03
+Fixture accuracy (verdict and source): 6/6
+
+Windows browser and live Docker verification: pending for this package.

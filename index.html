@@ -1,0 +1,1596 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScopeKeeper</title><link rel="icon" href="/favicon.svg">
+<style>
+:root{--wine:#681F35;--sand:#F6EFE6;--ivory:#FFFCF8;--pink:#E8B7C2;--ink:#30232A}
+*{box-sizing:border-box}body{margin:0;background:var(--sand);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+header,main,footer{max-width:1180px;margin:auto;padding:24px clamp(16px,4vw,48px)}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+header img{width:200px;display:block}.eyebrow{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;font-weight:750;color:var(--wine)}
+h1{font-size:clamp(2rem,5vw,3.7rem);line-height:1.05;margin:8px 0 12px;letter-spacing:-.045em}
+h2,h3,p{margin:0 0 .7rem}.status{padding:8px 14px;border-radius:20px;background:var(--pink);font-size:.84rem;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:28px;align-items:start}
+.panel{background:var(--ivory);border:1px solid #e7d7cf;border-radius:18px;padding:24px;min-width:0}
+label{display:block;font-weight:650;margin:14px 0 6px}textarea,input,select{font:inherit;color:inherit;border:1px solid #a88d95;border-radius:8px;padding:10px;background:white}
+textarea{width:100%;min-height:128px;resize:vertical}input[type=number]{width:9rem}input[type=checkbox]{accent-color:var(--wine)}
+button{background:var(--wine);color:white;font:inherit;font-weight:650;border:1px solid var(--wine);border-radius:9px;padding:8px 13px;cursor:pointer}
+button.secondary{color:var(--wine);background:transparent}button:disabled{opacity:.55;cursor:wait}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+details{border-top:1px solid #e7d7cf;margin-top:18px;padding-top:14px}summary{cursor:pointer;font-weight:700;color:var(--wine)}
+.evidence{border-left:3px solid var(--wine);padding-left:12px;margin-bottom:12px}.source{font-size:.75rem;overflow-wrap:anywhere}
+.change{padding:10px;background:var(--pink);border-radius:8px;margin-bottom:12px}
+.verdict{color:var(--wine);font-weight:800;font-size:1.2rem}.result+ .result{border-top:1px solid #e7d7cf;margin-top:20px;padding-top:16px}
+footer{font-size:.82rem}button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #8a3c54;outline-offset:3px}
+@media(max-width:730px){.grid{grid-template-columns:1fr} .panel{padding:17px}}
+body.dark{--sand:#231820;--ivory:#33242d;--ink:#fff1f4;--wine:#f5bccc}
+body.dark button:not(.secondary){color:#30232a}
+body.dark .status,body.dark .change{color:#30232a}
+body.dark textarea,body.dark input,body.dark select{background:#33242d;color:#fff1f4}
+.verdict{display:inline-block;padding:6px 12px;border:2px solid currentColor;border-radius:10px}
+@media(prefers-reduced-motion:no-preference){.evidence{animation:arrive .2s ease-out}@keyframes arrive{from{opacity:.5}to{opacity:1}}}
+html.large-text{font-size:125%}body{font-size:1rem}
+body.contrast{--sand:#fff;--ivory:#fff;--ink:#000;--wine:#491027;--pink:#f5c5d5}
+body.contrast.dark textarea,body.contrast.dark input,body.contrast.dark select{background:#fff;color:#000}
+body.contrast .panel,body.contrast input,body.contrast textarea,body.contrast select{border-color:#000}
+@media print{
+  body,body.dark,body.contrast{--sand:#fff;--ivory:#fff;--ink:#000;--wine:#000;--pink:#eee}
+  #display-controls,#request-panel,button,footer,.eyebrow,.roadmap-link{display:none}
+  .grid{display:block}.panel{border:0;padding:0}.evidence{break-inside:avoid;animation:none}
+  header,main{padding:8px}h1{font-size:24pt}
+  .status{border:1px solid #000}.result{break-inside:auto}
+}
+#toast{position:fixed;bottom:1rem;right:1rem;max-width:min(26rem,90vw);padding:12px;background:var(--ivory);color:var(--ink);border:2px solid var(--wine);border-radius:8px;z-index:10}
+@media print{#toast{display:none}}
+#file-drop{border:1px dashed var(--wine);border-radius:8px;padding:10px;margin-top:8px}
+.skeleton{height:1rem;margin:.65rem 0;background:var(--pink);border-radius:.25rem;opacity:.55}
+.skeleton:nth-child(2){width:75%}.skeleton:nth-child(3){width:55%}
+dialog{max-width:min(34rem,90vw);background:var(--ivory);color:var(--ink);border:2px solid var(--wine);border-radius:12px}
+dialog::backdrop{background:#0008}
+@media(prefers-reduced-motion:no-preference){
+  .skeleton{animation:skeleton-pulse .85s ease-in-out infinite alternate}
+  .verdict{animation:verdict-enter .22s ease-out}
+}
+@keyframes skeleton-pulse{to{opacity:.25}}
+@keyframes verdict-enter{from{transform:translateY(4px);opacity:.55}to{transform:none;opacity:1}}
+.history-entry{border-left:3px solid var(--wine);padding:.4rem .75rem;margin:.6rem 0}
+@media(prefers-reduced-motion:no-preference){.history-entry{animation:verdict-enter .22s ease-out}}
+#heatmap-content{overflow-x:auto}
+#heatmap-content table{border-collapse:collapse;font-size:.82rem}
+#heatmap-content th,#heatmap-content td{padding:.35rem;text-align:center;border:1px solid currentColor}
+#heatmap-content td[data-activity="some"]{background:#f6dfe5;color:#30232a}
+#heatmap-content td[data-activity="busy"]{background:#e8b7c2;color:#30232a}
+#heatmap-content td[data-activity="high"]{background:#681f35;color:#fff}
+.scope-ring{width:5rem;height:5rem;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--wine) var(--share),var(--pink) 0);color:var(--ink);margin:.5rem 0}
+.scope-ring span{background:var(--ivory);border-radius:50%;width:3.8rem;height:3.8rem;display:grid;place-items:center;font-weight:bold}
+html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+main.beginner-view [data-advanced]{display:none}
+.skip-link{position:absolute;left:.75rem;top:.75rem;z-index:10;background:var(--ivory);color:var(--ink);padding:.5rem}
+.skip-link:not(:focus){clip-path:inset(50%)}
+@supports (backdrop-filter: blur(8px)){
+  body.glass-cards:not(.contrast){background-image:radial-gradient(ellipse at 15% 20%, #e8b7c255, transparent 45%)}
+  body.glass-cards:not(.contrast) .panel{background:color-mix(in srgb, var(--ivory) 92%, transparent);backdrop-filter:blur(8px);box-shadow:0 8px 24px #30232a20}
+}
+@media print{body.glass-cards .panel{backdrop-filter:none;box-shadow:none}}
+</style>
+<header><img src="/logo.svg" alt="ScopeKeeper"><div class="status" id="mode">Connecting to local app…</div><button type="button" class="secondary" id="theme" aria-pressed="false">Dark mode</button></header>
+<a class="skip-link" href="#request-title">Skip to client request</a>
+<main>
+<details id="display-controls"><summary>Display and keyboard controls</summary>
+<div class="actions">
+<button type="button" class="secondary" id="font-size" aria-pressed="false">Larger text</button>
+<button type="button" class="secondary" id="contrast" aria-pressed="false">High contrast</button>
+<button type="button" class="secondary" id="print">Print scope review</button>
+</div>
+<label><input type="checkbox" id="glass-cards"> Glass-style cards</label>
+<label><input type="checkbox" id="reduce-motion"> Reduce motion</label>
+<label for="date-format">Date display</label><select id="date-format"><option value="iso">YYYY-MM-DD</option><option value="dmy">DD/MM/YYYY</option><option value="relative">Relative with exact date</option></select>
+<p>Press Ctrl+Enter inside Client message to assess. Press Alt+Shift+N for a new chat.</p>
+</details>
+<p><button type="button" class="secondary" id="beginner-view" aria-pressed="false">Beginner view</button></p>
+<div class="eyebrow">Fictional Studio · Website project</div>
+<p class="roadmap-link"><a href="/workbench">Project workbench</a> · <a href="/roadmap" style="color:var(--wine)">Roadmap</a></p><h1>Is this in scope?</h1>
+<p>Review a client request against the approved project history and prepare a reply.</p>
+<div class="grid">
+<section id="request-panel" class="panel" aria-labelledby="request-title">
+<h2 id="request-title" tabindex="-1">Client request</h2>
+<details><summary>Quick walkthrough</summary>
+<ol><li>Load the demo request and assess it with project memory on. The original scope excludes online payments.</li>
+<li>Open Client-approved amendment and confirm the fictional Razorpay approval.</li>
+<li>Start a new chat, load the same request and reassess. Review the amendment shown under Evidence.</li>
+<li>Open the session ledger to compare the two assessments. Reset the fictional demo to start over.</li></ol>
+</details>
+<details data-advanced><summary>Planning calculators</summary>
+<form id="change-cost">
+<h3>Change-cost estimate</h3>
+<label>Work hours <input name="work" type="number" min="0" max="10000" step="0.01" required></label>
+<label>Context-switch hours <input name="overhead" type="number" min="0" max="10000" step="0.01" value="0" required></label>
+<label>Hourly rate (₹) <input name="rate" type="number" min="0" max="1000000" step="0.01" required></label>
+<button>Calculate</button><output aria-live="polite"></output>
+</form>
+<form id="schedule-impact">
+<h3>Change schedule impact</h3>
+<label>Extra hours <input name="extra" type="number" min="0" max="10000" step="0.01" required></label>
+<label>Hours available per calendar day <input name="capacity" type="number" min="0.25" max="24" step="0.01" value="8" required></label>
+<label>Current planned finish <input name="finish" type="date" min="2000-01-01" max="2099-12-31" required></label>
+<label>Agreed deadline <input name="deadline" type="date" min="2000-01-01" max="2099-12-31" required></label>
+<button>Check schedule</button><output aria-live="polite"></output>
+<p class="source">Assumes the change starts after planned work and capacity is available every day, including weekends.</p>
+</form>
+<form id="hours-budget">
+<h3>Included hours budget</h3>
+<label>Included hours <input name="included" type="number" min="0" max="10000" step="0.01" required></label>
+<label>Consumed hours <input name="consumed" type="number" min="0" max="10000" step="0.01" required></label>
+<button>Check budget</button><progress value="0" max="1" aria-label="Share of included hours consumed" hidden></progress>
+<output aria-live="polite"></output>
+</form>
+<form id="warranty-window">
+<h3>Warranty coverage window</h3>
+<label>Warranty start <input name="start" type="date" min="2000-01-01" max="2099-12-31" required></label>
+<label>Warranty end (inclusive) <input name="end" type="date" min="2000-01-01" max="2099-12-31" required></label>
+<label>Incident date <input name="incident" type="date" min="2000-01-01" max="2099-12-31" required></label>
+<button>Check incident date</button><output aria-live="polite"></output>
+</form>
+<form id="support-window">
+<h3>Support period timer</h3>
+<label>Support start <input name="start" type="date" min="2000-01-01" max="2099-12-31" required></label>
+<label>Support end (inclusive) <input name="end" type="date" min="2000-01-01" max="2099-12-31" required></label>
+<button>Show countdown</button><output aria-live="polite"></output>
+</form>
+<form id="bundle-quote">
+<h3>Bundle quote planner</h3>
+<label>Item amounts (one per line, up to 20)<textarea name="amounts" maxlength="240" placeholder="1500&#10;1000" required></textarea></label>
+<label>Currency <select name="currency"><option>INR</option><option>USD</option><option>EUR</option><option>GBP</option></select></label>
+<label>Bundle discount (%) <input name="discount" type="number" min="0" max="100" step="0.01" value="0" required></label>
+<label>Proposed advance (%) <input name="advance" type="number" min="0" max="100" step="0.01" value="25" required></label>
+<button>Calculate quote</button><output aria-live="polite"></output>
+<p class="source">25% is an editable starting point for discussion. All items must use the selected currency. Currency selection changes display only.</p>
+</form>
+<form id="revision-counter">
+<h3>Revision rounds</h3>
+<label>Agreed rounds <input name="limit" type="number" min="0" max="1000" step="1" required></label>
+<label>Used rounds <input name="used" type="number" min="0" max="1000" step="1" value="0" required></label>
+<button>Check rounds</button><button type="button" id="add-revision" class="secondary">Record one round</button>
+<output aria-live="polite"></output>
+</form>
+<p class="source">Planning only. These inputs are separate from the scope verdict and its estimate.</p>
+</details>
+<button type="button" class="secondary" id="open-demo">Run guided demo</button>
+<dialog id="guided-demo" aria-labelledby="guided-demo-title">
+<h2 id="guided-demo-title">Guided demo · simulation</h2>
+<p>This walkthrough uses a separate fictional project. Your current approvals and ledger stay as they are.</p>
+<div id="guided-demo-step" aria-live="polite"></div>
+<div class="actions"><button id="demo-back" type="button" class="secondary">Previous step</button>
+<button id="demo-next" type="button" class="secondary">Next step</button>
+<form method="dialog"><button>Close demo</button></form></div>
+</dialog>
+<button type="button" id="open-commands" data-advanced class="secondary">Commands (Ctrl+K)</button>
+<form id="review">
+<label for="request">Client message</label>
+<textarea id="request" maxlength="4000" required placeholder="Paste the client’s request"></textarea>
+<div class="actions" role="group" aria-label="Fictional request examples">
+<button type="button" class="secondary" data-example="Can you add Stripe checkout?">Stripe checkout</button>
+<button type="button" class="secondary" data-example="Can you add a contact form?">Contact form</button>
+</div>
+<details><summary>Try with your own chat</summary>
+<ol><li>Copy a short excerpt that contains the request you want to review.</li>
+<li>Remove names, contact details and sensitive information. Paste it into Client message or load a UTF-8 .txt file below.</li>
+<li>Check the text, enter estimated hours if known, then select Assess request.</li></ol>
+<p>This fictional workspace uses the demo agreement. Use simulation or verify your local Hindsight endpoint before assessing private text. Imported chat does not change approved scope.</p></details>
+<details data-advanced><summary>Scan a message for intent, urgency or escalation</summary>
+<label for="scan-speaker">Who wrote this excerpt?</label>
+<select id="scan-speaker"><option value="client">Client</option><option value="freelancer">Freelancer (me)</option></select>
+<p class="source">Paste a single speaker’s words into Client message, then scan. Results are phrase matches for manual review. An approval tag does not record approval.</p>
+<button type="button" class="secondary" id="scan-request">Scan current text</button>
+<div id="scan-results" role="status"></div>
+</details>
+<button type="button" class="secondary" id="redact-request">Redact contact details</button>
+<p class="source">Masks common email addresses and phone formats. Review the text for names, addresses, and other sensitive details before assessing.</p>
+<details data-advanced><summary>Upwork or Fiverr paste mode</summary>
+<label for="marketplace">Marketplace</label><select id="marketplace"><option>Upwork</option><option>Fiverr</option></select>
+<label for="marketplace-paste">Paste one marketplace message</label>
+<textarea id="marketplace-paste" maxlength="8000" placeholder="Paste the request, including any copied conversation header"></textarea>
+<button type="button" id="marketplace-preview" class="secondary">Preview excerpt</button>
+<label for="marketplace-excerpt">Editable excerpt</label><textarea id="marketplace-excerpt" maxlength="4000"></textarea>
+<button type="button" id="marketplace-use" class="secondary">Use excerpt as client message</button>
+<p id="marketplace-status" class="source" role="status">Review the excerpt before assessing. This mode does not connect to your marketplace account.</p>
+</details>
+<label for="request-file">Import a UTF-8 text file for review</label>
+<input id="request-file" type="file" accept=".txt,text/plain"><label>Import an email thread (.eml, up to 12 KB) <input id="email-import" type="file" accept=".eml,message/rfc822"></label>
+<label>Import an exported WhatsApp chat (.txt, without media) <input id="whatsapp-import" type="file" accept=".txt,text/plain"></label>
+<p class="source">Imports load up to 4,000 characters for review. Email parsing runs on the local ScopeKeeper server. Review and redact before assessment.</p>
+<p id="file-drop">Or drop one .txt file here</p>
+<label><input type="checkbox" id="memory" checked> Demo comparison · Project memory <span id="memory-label">ON · With ScopeKeeper</span></label>
+<label for="hours">Estimated hours</label>
+<input id="hours" type="number" min="0.01" max="1000000" step="any" placeholder="2">
+<div class="actions"><button>Assess request</button><button type="button" id="compare-memory" class="secondary">Compare memory on vs off</button><button type="button" class="secondary" id="new">New Chat</button><button type="button" class="secondary" id="sample">Use demo request</button></div>
+</form>
+<details id="approval"><summary>Client-approved amendment</summary>
+<form id="amend">
+<label for="provider">Include checkout for</label><select id="provider"><option>Razorpay</option><option>Stripe</option></select>
+<label><input type="checkbox" id="confirmed" required> I confirm the fictional client approved this Oct 14 amendment.</label>
+<button>Record Client-Approved Amendment</button>
+<button type="button" class="secondary" id="amend-pending">Mark pending</button>
+<button type="button" class="secondary" id="amend-declined">Mark declined</button>
+<p id="amendment-status" role="status"></p>
+</form></details>
+<details id="history"><summary>Fictional project history</summary><label for="history-filter">Search history</label><input id="history-filter" type="search"><label for="scope-timeline">Scope item timeline</label><select id="scope-timeline"><option value="">All scope items</option></select><label for="history-as-of">Show records through (inclusive)</label><input type="date" id="history-as-of"><label><input type="checkbox" id="pinned-history"> Pinned records only</label><button type="button" id="clear-history-filters" class="secondary">Clear history filters</button><div id="records"></div></details>
+<div class="actions"><button type="button" class="secondary" id="reset">Reset fictional demo</button></div>
+<details id="ledger" data-advanced><summary>Session request ledger</summary><p><a href="/api/ledger.csv" download="scopekeeper-ledger.csv">Download session CSV</a></p><label for="ledger-filter">Filter requests, verdicts, notes or tags</label><input id="ledger-filter" type="search">
+<label for="ledger-order">Order</label><select id="ledger-order"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="priority">Priority (value + urgency)</option></select>
+<label><input type="checkbox" id="starred-only"> Starred only</label><label><input type="checkbox" id="archived-only"> Show archived requests</label><button type="button" id="undo-archive" hidden>Undo last archive or restore</button><p id="wrap-up"></p><div id="scope-health"></div><details id="request-heatmap"><summary>Request activity heatmap</summary><div id="heatmap-content"></div></details><label for="stage-filter">Workflow view</label><select id="stage-filter"><option value="">All stages</option><option>Deferred</option><option value="unbilled">Unbilled delivered extras</option></select><button type="button" id="clear-ledger-filters" class="secondary">Reset ledger filters and sort</button><div id="ledger-items"></div></details><p id="notice" role="status"></p>
+</section>
+<section class="panel" aria-labelledby="result-title"><h2 id="result-title">Scope review</h2><div id="result" aria-live="polite"><div class="scope-empty"><svg width="108" height="76" viewBox="0 0 108 76" aria-hidden="true" fill="none"><rect x="12" y="8" width="60" height="60" rx="8" stroke="currentColor" stroke-width="3"/><path d="M24 25h34M24 36h28M24 47h19" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="76" cy="47" r="15" fill="#e8b7c2" stroke="currentColor" stroke-width="3"/><path d="m87 58 11 11" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><p>Assess a client request to see the verdict and dated evidence.</p></div></div></section>
+</div>
+</main><footer>
+<p>ScopeKeeper 1.25 · Fictional data · Editable reply templates · AI suggestion, not legal advice.</p>
+<details><summary>Changelog</summary><p>1.25 adds the import and change-request tools. 1.24 adds the project workbench and verdict image. 1.23 adds bundle quote planning. 1.22 adds warranty and support windows. 1.21 adds schedule and hours-budget checks. 1.20 adds planning calculators. 1.19 adds onboarding, commands and assessment feedback. 1.18 adds contact redaction. 1.17 adds chat intake guidance and text-file drop. 1.16 adds template search and preview. 1.15 adds a reply tone slider. 1.14 adds negotiation templates. 1.13 adds reply formats and client options. 1.12 adds client-friendly summaries. 1.11 adds a text dispute report. 1.10 adds evidence bundle export. 1.9 adds a decision audit trail and verdict history. 1.8 adds request priority, risks and assumptions. 1.7 adds workflow stages and delivery proof. 1.6 adds session summaries, intake autosave, date display options, toast messages, and archive undo. 1.5 adds request archive and restore. 1.4 adds session request annotations and project history search. 1.3 adds display controls, keyboard shortcuts, a print layout, and reply subject suggestions. The prior update added ledger search and citation copying.</p></details>
+<p><a href="/welcome">How ScopeKeeper works</a> · <a href="/about">About ScopeKeeper</a></p>
+</footer>
+<div id="toast" hidden aria-hidden="true"></div>
+<dialog id="command-dialog" aria-labelledby="command-title">
+<h2 id="command-title">Commands</h2>
+<label for="command-search">Filter commands</label><input id="command-search" type="search">
+<div id="command-results" class="actions"></div>
+<form method="dialog"><button>Close</button></form>
+</dialog>
+<script>
+const $ = id => document.getElementById(id);
+$('glass-cards').addEventListener('change', () => {
+  document.body.classList.toggle('glass-cards', $('glass-cards').checked);
+});
+$('reduce-motion').addEventListener('change', () => {
+  document.documentElement.classList.toggle('reduce-motion', $('reduce-motion').checked);
+});
+document.querySelectorAll('[data-example]').forEach(button => {
+  button.addEventListener('click', () => {
+    $('request').value = button.dataset.example;
+    saveDraft();
+    $('request').focus();
+  });
+});
+$('beginner-view').addEventListener('click', () => {
+  const enabled = document.querySelector('main').classList.toggle('beginner-view');
+  $('beginner-view').setAttribute('aria-pressed', String(enabled));
+});
+let config, busy = false, ledgerRows = [], historyRows = [];
+let undoArchive, toastTimer;
+function displayDate(iso) {
+  const [year, month, day] = iso.split('-');
+  if ($('date-format').value === 'dmy') return day + '/' + month + '/' + year;
+  if ($('date-format').value !== 'relative') return iso;
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const difference = Math.round((Date.parse(iso) - today) / 86400000);
+  return new Intl.RelativeTimeFormat('en', {numeric:'auto'}).format(difference, 'day') + ' (' + iso + ')';
+}
+function toast(message) {
+  const box = $('toast');
+  clearTimeout(toastTimer);
+  box.textContent = message;
+  box.hidden = !message;
+  if (message) toastTimer = setTimeout(() => { box.hidden = true; }, 4500);
+}
+function saveDraft() {
+  $('scan-results').replaceChildren();
+  try { sessionStorage.setItem('scopekeeper-intake', JSON.stringify([$('request').value, $('hours').value])); }
+  catch { /* Private browser settings can disable storage. */ }
+}
+try {
+  const [request, hours] = JSON.parse(sessionStorage.getItem('scopekeeper-intake') || '[]');
+  if (typeof request === 'string') $('request').value = request;
+  if (typeof hours === 'string') $('hours').value = hours;
+} catch { /* Start with a blank draft if storage is unavailable. */ }
+$('request').addEventListener('input', saveDraft);
+$('hours').addEventListener('input', saveDraft);
+function changeCost(work, overhead, rate) {
+  return (work + overhead) * rate;
+}
+function revisionBalance(limit, used) {
+  const remaining = limit - used;
+  if (remaining < 0) return Math.abs(remaining) + ' round(s) over the agreed limit.';
+  if (remaining === 0) return 'No included revision rounds left.';
+  return remaining + ' included round(s) left.';
+}
+function scheduleImpact(extra, capacity, finish, deadline) {
+  const delay = Math.ceil(extra / capacity);
+  const dayMs = 86400000;
+  const projected = Date.parse(finish) + delay * dayMs;
+  return {
+    delay,
+    projected: new Date(projected).toISOString().slice(0, 10),
+    lateBy: Math.max(0, (projected - Date.parse(deadline)) / dayMs)
+  };
+}
+function budgetBalance(included, consumed) {
+  const difference = Math.round((included - consumed) * 100) / 100;
+  return {
+    progress: included > 0 ? Math.min(1, consumed / included) : Number(consumed > 0),
+    message: difference < 0 ? Math.abs(difference) + ' hours over budget.' : difference + ' included hours remaining.'
+  };
+}
+function warrantyWindow(start, end, incident) {
+  if (end < start) return 'The warranty end must be on or after its start.';
+  if (incident < start) return 'The incident predates the warranty window.';
+  if (incident > end) return 'The incident is after the warranty window.';
+  return 'The incident date is inside the warranty window. Check the agreed terms for coverage.';
+}
+function supportCountdown(start, end, today) {
+  if (end < start) return 'The support end must be on or after its start.';
+  const days = (from, to) => (Date.parse(to) - Date.parse(from)) / 86400000;
+  if (today < start) return 'Support starts in ' + days(today, start) + ' day(s).';
+  if (today > end) return 'Support ended ' + days(end, today) + ' day(s) ago.';
+  if (today === end) return 'Support ends today.';
+  return 'Support ends in ' + days(today, end) + ' day(s).';
+}
+function bundleQuote(text, discount, advance) {
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (!lines.length || lines.length > 20 || lines.some(line => !/^\d{1,7}(\.\d{1,2})?$/.test(line))) {
+    throw Error('Enter 1–20 item amounts, one per line, with up to two decimal places.');
+  }
+  const subtotal = lines.reduce((sum, line) => sum + Math.round(Number(line) * 100), 0);
+  const savings = Math.round(subtotal * discount / 100);
+  const total = subtotal - savings;
+  const deposit = Math.round(total * advance / 100);
+  return {subtotal, savings, total, deposit, balance:total - deposit};
+}
+const costForm = $('change-cost');
+const revisionForm = $('revision-counter');
+costForm.onsubmit = event => {
+  event.preventDefault();
+  const {work, overhead, rate} = costForm.elements;
+  const amount = changeCost(work.valueAsNumber, overhead.valueAsNumber, rate.valueAsNumber);
+  costForm.querySelector('output').value = 'Planning estimate: '
+    + new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR'}).format(amount);
+};
+revisionForm.onsubmit = event => {
+  event.preventDefault();
+  const {limit, used} = revisionForm.elements;
+  revisionForm.querySelector('output').value = revisionBalance(limit.valueAsNumber, used.valueAsNumber);
+};
+$('add-revision').onclick = () => {
+  if (!revisionForm.reportValidity()) return;
+  const used = revisionForm.elements.used;
+  if (used.valueAsNumber >= Number(used.max)) return;
+  used.value = used.valueAsNumber + 1;
+  revisionForm.requestSubmit();
+};
+const scheduleForm = $('schedule-impact');
+const budgetForm = $('hours-budget');
+scheduleForm.onsubmit = event => {
+  event.preventDefault();
+  const {extra, capacity, finish, deadline} = scheduleForm.elements;
+  const impact = scheduleImpact(extra.valueAsNumber, capacity.valueAsNumber, finish.value, deadline.value);
+  scheduleForm.querySelector('output').value = impact.delay + ' calendar day(s) added. Projected finish: '
+    + impact.projected + '. ' + (impact.lateBy
+      ? 'Warning: ' + impact.lateBy + ' day(s) past the agreed deadline.'
+      : 'Within the agreed deadline.');
+};
+budgetForm.onsubmit = event => {
+  event.preventDefault();
+  const {included, consumed} = budgetForm.elements;
+  const balance = budgetBalance(included.valueAsNumber, consumed.valueAsNumber);
+  const bar = budgetForm.querySelector('progress');
+  bar.value = balance.progress;
+  bar.hidden = false;
+  budgetForm.querySelector('output').value = consumed.valueAsNumber + ' of ' + included.valueAsNumber
+    + ' hours consumed. ' + balance.message;
+};
+const warrantyForm = $('warranty-window');
+const supportForm = $('support-window');
+let supportTimer;
+warrantyForm.onsubmit = event => {
+  event.preventDefault();
+  const {start, end, incident} = warrantyForm.elements;
+  warrantyForm.querySelector('output').value = warrantyWindow(start.value, end.value, incident.value);
+};
+supportForm.onsubmit = event => {
+  event.preventDefault();
+  clearInterval(supportTimer);
+  const {start, end} = supportForm.elements;
+  const startDate = start.value;
+  const endDate = end.value;
+  const update = () => {
+    const now = new Date();
+    const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
+      .map(number => String(number).padStart(2, '0')).join('-');
+    const output = supportForm.querySelector('output');
+    const message = supportCountdown(startDate, endDate, today);
+    if (output.value !== message) output.value = message;
+  };
+  update();
+  if (endDate >= startDate) supportTimer = setInterval(update, 60000);
+};
+supportForm.addEventListener('input', () => clearInterval(supportTimer));
+const bundleForm = $('bundle-quote');
+bundleForm.onsubmit = event => {
+  event.preventDefault();
+  const {amounts, currency, discount, advance} = bundleForm.elements;
+  const output = bundleForm.querySelector('output');
+  try {
+    const quote = bundleQuote(amounts.value, discount.valueAsNumber, advance.valueAsNumber);
+    const formatter = new Intl.NumberFormat('en-IN', {style:'currency', currency:currency.value});
+    const money = cents => formatter.format(cents / 100);
+    output.value = 'Subtotal ' + money(quote.subtotal) + ' · Discount ' + money(quote.savings)
+      + ' · Total ' + money(quote.total) + ' · Suggested advance ' + money(quote.deposit)
+      + ' · Balance ' + money(quote.balance);
+  } catch (error) {
+    output.value = error.message;
+  }
+};
+const planningForms = [costForm, revisionForm, scheduleForm, budgetForm, warrantyForm, supportForm, bundleForm];
+for (const form of planningForms) {
+  form.addEventListener('input', () => {
+    form.querySelector('output').value = '';
+    const bar = form.querySelector('progress');
+    if (bar) bar.hidden = true;
+  });
+}
+const illustratedEmpty = $('result').firstElementChild.cloneNode(true);
+function showEmptyReview() {
+  $('result').replaceChildren(illustratedEmpty.cloneNode(true));
+}
+
+const replyDraftKey = 'scopekeeper-reply-drafts-v1';
+function readReplyDrafts() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(replyDraftKey) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch { return []; }
+}
+function rememberReply(key, text) {
+  try {
+    const drafts = readReplyDrafts().filter(draft => draft?.key !== key);
+    drafts.push({key, text:text.slice(0, 16000)});
+    sessionStorage.setItem(replyDraftKey, JSON.stringify(drafts.slice(-12)));
+  } catch { /* Keep the editor usable when storage is disabled. */ }
+}
+function clearChat() {
+  try { sessionStorage.removeItem(replyDraftKey); } catch { /* Storage may be disabled. */ }
+  document.title = 'ScopeKeeper';
+  $('request').value = ''; $('hours').value = ''; saveDraft();
+  showEmptyReview(); $('notice').textContent = '';
+}
+function add(parent, tag, value, css) {
+  const el = document.createElement(tag); el.textContent = value;
+  if (css) el.className = css;
+  parent.append(el); return el;
+}
+async function send(path, body) {
+  if (!config) throw Error('The local app is still connecting.');
+  const response = await fetch('/api/' + path, {method:'POST',
+    headers:{'Content-Type':'application/json','X-ScopeKeeper-Token':config.token}, body:JSON.stringify(body)});
+  const data = await response.json();
+  if (!response.ok) throw Error(data.error);
+  return data;
+}
+async function run(action) {
+  if (busy) return;
+  busy = true; $('notice').textContent = 'Working…';
+  document.querySelectorAll('button, input, select, textarea').forEach(el => el.disabled = true);
+  try { $('notice').textContent = await action() || ''; }
+  catch (error) { $('notice').textContent = error.message; }
+  finally {
+    toast($('notice').textContent);
+    busy = false;
+    document.querySelectorAll('button, input, select, textarea').forEach(el => el.disabled = false);
+  }
+}
+function replyVariants(item, subject) {
+  const brief = {
+    Included: 'This is covered by the approved scope. I’ll confirm the delivery timing.',
+    Billable: item.estimate && item.estimate !== 'Estimate pending'
+      ? 'This is outside the approved scope. The estimate is ' + item.estimate + '. Please confirm before I start.'
+      : 'This is outside the approved scope. I’ll confirm the estimate before starting.',
+    'Needs Review': item.reply,
+    Courtesy: item.reply
+  };
+  const variants = {
+    'Standard': item.reply,
+    'Short': brief[item.verdict] ?? item.reply,
+    'Email': 'Subject: ' + subject + '\n\nHi,\n\n' + item.reply + '\n\nThanks,',
+    'WhatsApp': 'Hi! ' + brief[item.verdict]
+  };
+  if (item.verdict === 'Billable') {
+    const price = item.estimate && item.estimate !== 'Estimate pending'
+      ? ' at an estimated ' + item.estimate : ' after we agree on an estimate';
+    variants['Scope negotiation'] = 'This request is outside the approved scope. We can choose a way forward:\n'
+      + '1. Reduce the requested change and review the smaller scope together.\n'
+      + '2. Defer the change until after the current delivery.\n'
+      + '3. Add the work' + price + '.';
+    variants['Small request response'] = 'I understand this looks like a small change. It is outside the approved scope, '
+      + 'so I’ll confirm the effort and timing separately. We can add it' + price
+      + ', or keep the current scope. Please let me know which you prefer.';
+    if (item.estimate && item.estimate !== 'Estimate pending') {
+      variants['Optional extra quote'] = 'I can add this as an optional extra for an estimated ' + item.estimate
+        + '. The original scope can proceed either way. If you’d like the extra work, please confirm so we can agree on timing.';
+    }
+    variants['Two options'] = 'This request is outside the approved scope. Which option works better for you?\n'
+      + '1. Add this work' + price + '.\n'
+      + '2. Continue with the original scope and leave this change out for now.';
+  }
+  return variants;
+}
+
+function applyReplyTone(message, tone) {
+  const opening = {
+    0: 'Hello, I appreciate you bringing this up.',
+    1: '',
+    2: 'Thanks for asking. Happy to work through this with you!'
+  }[tone];
+  if (!opening) return message;
+  const emailEnd = message.startsWith('Subject: ') ? message.indexOf('\n\n') : -1;
+  if (emailEnd < 0) return opening + '\n\n' + message;
+  const body = message.slice(emailEnd + 2).replace(/^Hi,\n\n/, '');
+  return message.slice(0, emailEnd + 2) + opening + '\n\n' + body;
+}
+
+function matchingTemplates(variants, query) {
+  const term = query.trim().toLowerCase();
+  return Object.keys(variants).filter(name =>
+    (name + ' ' + variants[name]).toLowerCase().includes(term));
+}
+
+function downloadVerdictCard(item) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 960;
+  canvas.height = 500;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) { $('notice').textContent = 'Image export unavailable.'; return; }
+  ctx.fillStyle = '#f6efe6';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#681f35';
+  ctx.fillRect(0, 0, canvas.width, 12);
+  ctx.font = 'bold 28px system-ui';
+  ctx.fillText('ScopeKeeper · Fictional project', 52, 78);
+  ctx.font = 'bold 56px system-ui';
+  ctx.fillText(item.verdict, 52, 166);
+  ctx.fillStyle = '#30232a';
+  ctx.font = '25px system-ui';
+  const reason = item.reason.split(/\s+/);
+  let line = '', y = 224;
+  for (const word of reason) {
+    const next = (line + ' ' + word).trim();
+    if (line && ctx.measureText(next).width > 850) {
+      ctx.fillText(line, 52, y);
+      line = word;
+      y += 35;
+    } else { line = next; }
+  }
+  if (line) ctx.fillText(line, 52, y, 850);
+  if (item.estimate) ctx.fillText('Estimate: ' + item.estimate, 52, 352, 850);
+  const source = item.evidence.find(record => record.source === item.deciding);
+  ctx.font = '21px system-ui';
+  ctx.fillText(source ? 'Deciding record: ' + source.date + ' · ' + source.source
+    : 'No deciding record', 52, 409, 850);
+  ctx.fillText(config?.live ? 'Live mode' : 'Simulation', 52, 455);
+  canvas.toBlob(blob => {
+    if (!blob) { $('notice').textContent = 'Could not create the verdict image.'; return; }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'scopekeeper-verdict.png';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    $('notice').textContent = 'Verdict card download started.';
+  }, 'image/png');
+}
+
+function evidenceStrength(item) {
+  if (item.evidence.some(record => record.source === item.deciding)) {
+    return {level:2, label:'Deciding record found'};
+  }
+  return item.evidence.length ? {level:1, label:'Context only'} : {level:0, label:'No evidence retrieved'};
+}
+
+function decidingSentence(item, evidence) {
+  if (evidence.source !== item.deciding) return '';
+  const sentences = evidence.text.match(/[^.!?]+[.!?]?/g) || [];
+  const pattern = item.changed ? /checkout is included/i
+    : item.verdict === 'Billable' ? /payments and checkout are excluded/i
+    : item.verdict === 'Included' ? /covers a five-page website with a contact form/i : null;
+  return pattern ? (sentences.find(sentence => pattern.test(sentence)) || '').trim() : '';
+}
+
+function supportExplanation(item) {
+  if (item.verdict === 'Needs Review') return 'Undetermined. ' + item.reason;
+  const deciding = item.evidence.find(record => record.source === item.deciding);
+  if (!deciding) return 'Limited. No deciding record was retrieved.';
+  if (!decidingSentence(item, deciding)) return 'Supported by the cited record. Review the full passage for context.';
+  return 'Direct support. The highlighted sentence states the scope rule applied to this request.';
+}
+
+function assessmentLabel(items) {
+  const verdicts = [...new Set(items.map(item => item.verdict))];
+  if (verdicts.length > 1 && verdicts.includes('Included') && verdicts.includes('Billable')) {
+    return 'Partially included · other work billable';
+  }
+  return verdicts.join(' / ');
+}
+function show(data) {
+  $('result').replaceChildren();
+  if (data.previous_assessments > 0) {
+    add($('result'), 'p', 'Matching earlier assessments in this session: ' + data.previous_assessments
+      + '. This assessment has its own ledger entry.', 'source');
+  }
+  const items = data.items || [data];
+  const label = assessmentLabel(items);
+  if (items.length > 1) add($('result'), 'h3', label);
+  const glossary = {
+    Included:'The approved scope covers this request.',
+    Courtesy:'The record identifies a one-time exception.',
+    Billable:'The request is outside the agreed scope.',
+    'Needs Review':'More evidence or clarification is needed.'
+  };
+  document.title = [...new Set(items.map(item => item.verdict))].join(' / ') + ' · ScopeKeeper';
+  for (const item of items) {
+    const panel = add($('result'),'div','','result');
+    const icon = {'Included':'✓','Billable':'＋','Needs Review':'?', 'Courtesy':'◇'};
+    add(panel,'p',(item.item ? item.item + ' · ' : '') + icon[item.verdict] + ' ' + item.verdict,'verdict').title = glossary[item.verdict];
+    const reason = add(panel,'p',item.reason,item.changed ? 'change' : '');
+    if (item.changed) reason.title = 'Amended means a recorded approval changed the scope.';
+    const definitions = add(panel,'details','');
+    add(definitions,'summary','What does this verdict mean?');
+    add(definitions,'p',glossary[item.verdict]);
+    if (item.changed) add(definitions,'p','Amended means a recorded approval changed the scope.');
+    if (item.estimate) add(panel,'p',item.estimate === 'Estimate pending' ? item.estimate : 'Estimate · ' + item.estimate);
+    add(panel,'h3','Evidence');
+    const strength = evidenceStrength(item);
+    const strengthLabel = add(panel, 'label', 'Evidence coverage: ' + strength.label + ' ');
+    const meter = add(strengthLabel, 'meter', '');
+    meter.min = 0;
+    meter.max = 2;
+    meter.value = strength.level;
+    meter.setAttribute('aria-valuetext', strength.label);
+    add(panel, 'p', 'Verdict support: ' + supportExplanation(item), 'source');
+    if (!item.evidence.length) add(panel,'p','No project evidence used.');
+    if (data.items && item.estimate) add(panel,'p','Enter hours in a separate review for this item.');
+    for (const evidence of item.evidence) {
+      const card = add(panel,'div','','evidence');
+      add(card,'strong',evidence.date + (evidence.source === item.deciding ? ' · Deciding source' : ' · Context'));
+      const passage = add(card, 'p', '');
+      const sentence = decidingSentence(item, evidence);
+      if (sentence) {
+        const position = evidence.text.indexOf(sentence);
+        passage.append(evidence.text.slice(0, position));
+        add(passage, 'mark', sentence);
+        passage.append(evidence.text.slice(position + sentence.length));
+      } else { passage.textContent = evidence.text; }
+      add(card,'p','Source: ' + evidence.source + ' · Fact: ' + evidence.fact,'source');
+      add(card,'button','Copy citation','secondary').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(evidence.date + ' · ' + evidence.source + ' · Fact: ' + evidence.fact + ' · ' + evidence.text);
+          $('notice').textContent = 'Citation copied.';
+        } catch { $('notice').textContent = 'Clipboard unavailable. Select and copy the evidence text.'; }
+      };
+    }
+    add(panel, 'button', 'Download verdict card image', 'secondary').onclick = () => downloadVerdictCard(item);
+    add(panel,'h3','Reply draft');
+    const subject = {'Billable':'Estimate for your scope change',
+      'Included':'Update on your website request',
+      'Needs Review':'Clarification on your website request',
+      'Courtesy':'One-time courtesy on your website request'};
+    add(panel,'p','Suggested email subject: ' + subject[item.verdict]);
+    const draft = add(panel,'textarea','');
+    const key = JSON.stringify([$('request').value.trim(), $('hours').value,
+      $('memory').checked, config?.live, item.item ?? '', item.verdict, item.reply,
+      item.evidence.map(record => [record.source, record.fact, record.date])]);
+    const saved = readReplyDrafts().find(entry => entry?.key === key && typeof entry.text === 'string');
+    draft.value = saved ? saved.text : item.reply;
+    draft.maxLength = 16000;
+    draft.setAttribute('aria-label','Editable reply draft');
+    if (saved) add(panel, 'p', 'Saved draft restored for this assessment.', 'source');
+    const stats = add(panel,'p','','source');
+    draft.oninput = () => {
+      const words = (draft.value.match(/\S+/gu) || []).length;
+      stats.textContent = words + ' words · ' + Math.ceil(words / 200 * 60) + ' sec reading time';
+      rememberReply(key, draft.value);
+    };
+    draft.oninput();
+    const replyTools = add(panel, 'details', '');
+    add(replyTools, 'summary', 'Prepare your reply');
+    const variants = replyVariants(item, subject[item.verdict]);
+    const library = add(replyTools, 'fieldset', '');
+    add(library, 'legend', 'Reply template library');
+    const search = add(add(library, 'label', 'Search templates '), 'input', '');
+    search.type = 'search';
+    const format = add(add(library, 'label', 'Reply format '), 'select', '');
+    const preview = add(library, 'pre', '');
+    preview.style.whiteSpace = 'pre-wrap';
+    preview.setAttribute('aria-live', 'polite');
+    const tone = add(add(replyTools, 'label', 'Reply tone '), 'input', '');
+    tone.type = 'range';
+    tone.min = 0;
+    tone.max = 2;
+    tone.value = 1;
+    const toneLabel = add(replyTools, 'p', '', 'source');
+    const updatePreview = () => {
+      preview.textContent = format.value
+        ? applyReplyTone(variants[format.value], tone.value)
+        : 'No templates match this search.';
+    };
+    search.oninput = () => {
+      const previous = format.value;
+      const matches = matchingTemplates(variants, search.value);
+      format.replaceChildren();
+      for (const name of matches) add(format, 'option', name);
+      if (matches.includes(previous)) format.value = previous;
+      updatePreview();
+    };
+    format.onchange = updatePreview;
+    tone.oninput = () => {
+      toneLabel.textContent = ['Formal', 'Neutral', 'Warm'][Number(tone.value)];
+      tone.setAttribute('aria-valuetext', toneLabel.textContent);
+      updatePreview();
+    };
+    search.oninput();
+    tone.oninput();
+    add(replyTools, 'button', 'Use selected format', 'secondary').onclick = () => {
+      if (!format.value) { search.focus(); return; }
+      const selected = applyReplyTone(variants[format.value], tone.value);
+      if (draft.value !== item.reply && draft.value !== selected && !confirm('Replace your edited reply?')) return;
+      draft.value = selected;
+      draft.oninput();
+      draft.focus();
+    };
+    if (item.evidence.length) {
+      add(replyTools, 'button', 'Append dated sources', 'secondary').onclick = () => {
+        const references = item.evidence.map(entry => entry.date + ' · ' + entry.source).join('\n');
+        const block = 'Project references:\n' + references;
+        if (!draft.value.includes(block)) draft.value = draft.value.trimEnd() + '\n\n' + block;
+        draft.oninput();
+      };
+    }
+    const deadline = add(add(replyTools, 'label', 'Requested reply date'), 'input', '');
+    deadline.type = 'date';
+    add(replyTools, 'button', 'Add polite deadline line', 'secondary').onclick = () => {
+      if (!deadline.value) { deadline.focus(); return; }
+      const line = 'Could you please confirm by ' + deadline.value + ' so I can plan the next steps?';
+      if (!draft.value.includes(line)) draft.value = draft.value.trimEnd() + '\n\n' + line;
+      draft.oninput();
+    };
+    const checklist = add(replyTools, 'fieldset', '');
+    add(checklist, 'legend', 'Before you send');
+    for (const check of ['I verified the scope and sources.', 'I checked the estimate and dates.', 'The reply gives the client a clear next step.']) {
+      const label = add(checklist, 'label', '');
+      const box = add(label, 'input', '');
+      box.type = 'checkbox';
+      label.append(document.createTextNode(' ' + check));
+    }
+    const copy = add(panel,'button','Copy reply','secondary');
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(draft.value); $('notice').textContent = 'Reply copied.'; }
+      catch { draft.select(); $('notice').textContent = 'Reply selected. Press Ctrl+C to copy.'; }
+    };
+  }
+}
+fetch('/api/config').then(response => response.json()).then(data => {
+  config = data;
+  const labels = {
+    local: 'Hindsight live mode · loopback endpoint',
+    remote: 'Hindsight live mode · remote endpoint',
+    simulation: 'Simulated demo — Hindsight live verification pending'
+  };
+  $('mode').textContent = labels[data.memory_target];
+}).catch(() => $('mode').textContent = 'Could not connect to local app');
+function extractRequestEntities(text) {
+  const patterns = [
+    ['Feature', 'Checkout', /\b(?:checkout|payment gateway|online payments?)\b/i],
+    ['Feature', 'Contact form', /\bcontact forms?\b/i],
+    ['Feature', 'Contact button', /\b(?:contact|chat|whats\s*app) buttons?\b/i],
+    ['Feature', 'Logo', /\blogos?\b/i],
+    ['Platform', 'WhatsApp', /\bwhats\s*app\b/i],
+    ['Platform', 'Website', /\bweb\s*sites?\b/i],
+    ['Vendor', 'Razorpay', /\brazor\s*pay\b/i],
+    ['Vendor', 'Stripe', /\bstripe\b/i]
+  ];
+  return patterns.filter(([, , pattern]) => pattern.test(text)).map(([type, name]) => ({type, name}));
+}
+
+function scanMessage(text, speaker) {
+  const commitment = /\b(?:I|we)(?:\s+will|['’]ll|\s+promise\s+to)\s+(?:add|include|deliver|send|finish|build|fix|provide|implement|complete|update)\b/i;
+  const refund = /\b(?:(?:want|need|demand|request)\s+(?:a\s+|my\s+|a full\s+)?refund|refund\s+(?:me|my payment)|money back)\b/i;
+  const threat = /\b(?:legal action|take you to court|file a complaint|chargeback|report you|sue you|contact my lawyer)\b/i;
+  const bug = /\b(?:bug|regression|crash(?:es|ed|ing)?|broken|error|stopped working|not working|doesn['’]t work|fails? to load)\b/i;
+  const change = /\b(?:add|introduce|replace|redesign|expand|new feature|change the|switch to)\b/i;
+  const intent = [
+    ['Request', /\b(?:(?:can|could|would) you|please (?:add|fix|send|change)|(?:we|I) (?:want|need) you to)\b/i],
+    ['Offer', /\b(?:(?:I|we) can (?:offer|provide|add|deliver)|happy to (?:offer|provide|add))\b/i],
+    ['Approval wording', /\b(?:(?:I|we) (?:approve|accept)|approved as proposed|please proceed|go ahead with)\b/i],
+    ['Refusal', /\b(?:(?:I|we) (?:decline|reject)|do not approve|don['’]t approve|not interested|no thanks)\b/i]
+  ];
+  const urgency = /\b(?:asap|urgent(?:ly)?|immediately|by today|before launch|by end of day)\b/i;
+  const sentiment = [
+    ['Frustration wording', /\b(?:frustrated|disappointed|unacceptable|fed up|upset)\b/i],
+    ['Appreciation wording', /\b(?:thank you|thanks|appreciate it|great work|love it)\b/i]
+  ];
+  const verbalApproval = /\b(?:verbal(?:ly)?\s+(?:approved|agreed|accepted|confirmed|approval)|(?:approved|agreed|accepted|confirmed|said yes|gave (?:the )?go.ahead)\b.{0,50}\b(?:on|during|over|in)\s+(?:(?:the|a|our|a video|a phone|a zoom)\s+)?(?:call|phone|meeting|zoom)|(?:call|meeting)\b.{0,50}\b(?:approved|gave (?:the )?go.ahead|said yes))\b/i;
+  const result = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n/).map(line => line.trim()).filter(Boolean)) {
+    if (speaker === 'freelancer' && commitment.test(sentence)) result.push({label:'Possible commitment', sentence});
+    if (speaker === 'client' && refund.test(sentence)) result.push({label:'Possible refund demand', sentence});
+    if (speaker === 'client' && threat.test(sentence)) result.push({label:'Possible escalation', sentence});
+    if (verbalApproval.test(sentence)) result.push({label:'Verbal approval mentioned · verify in writing', sentence});
+    const tags = intent.filter(([, pattern]) => pattern.test(sentence));
+    for (const [label] of tags) result.push({label, sentence});
+    if (speaker === 'client') {
+      if (urgency.test(sentence)) result.push({label:'Urgency wording', sentence});
+      for (const [label, pattern] of sentiment) {
+        if (pattern.test(sentence)) result.push({label, sentence});
+      }
+      const bugMatch = bug.test(sentence), changeMatch = change.test(sentence);
+      if (bugMatch || changeMatch) {
+        const label = bugMatch && changeMatch ? 'Mixed bug/change wording'
+          : bugMatch ? 'Possible bug report' : 'Possible change request';
+        result.push({label, sentence});
+      }
+    }
+
+  }
+  return result;
+}
+function refersToEarlierScope(text) {
+  return /\b(?:as (?:we )?(?:previously )?(?:discussed|agreed|mentioned)|(?:per|following) (?:our|the) (?:last |earlier )?(?:call|discussion|meeting)|same as (?:last time|before))\b/i.test(text);
+}
+const scanResults = $('scan-results');
+$('scan-request').onclick = () => run(async () => {
+  scanResults.replaceChildren();
+  const text = $('request').value.trim();
+  if (!text) { scanResults.textContent = 'Paste a message first.'; return; }
+  const signals = scanMessage(text, $('scan-speaker').value);
+  const entities = extractRequestEntities(text);
+  for (const signal of signals) add(scanResults, 'p', signal.label + ': ' + signal.sentence);
+  for (const entity of entities) add(scanResults, 'p', entity.type + ': ' + entity.name);
+  if (!refersToEarlierScope(text)) {
+    if (!signals.length && !entities.length) scanResults.textContent = 'No matching phrases found. Review the context manually.';
+    return;
+  }
+  add(scanResults, 'p', 'This message refers to earlier scope. Check the original thread or written approval.');
+  try {
+    const response = await fetch('/api/ledger', {cache:'no-store'});
+    if (!response.ok) throw Error();
+    const rows = await response.json();
+    const matches = similarRequests({request:text}, rows);
+    if (!matches.length) add(scanResults, 'p', 'No related assessed requests found in this session.');
+    for (const {row, score} of matches) {
+      const link = add(scanResults, 'button', 'Open earlier request · ' + displayDate(row.date) + ' · ' + Math.round(score * 100) + '% word overlap', 'secondary');
+      add(scanResults, 'p', row.request, 'source');
+      link.onclick = async () => {
+        $('ledger').open = true;
+        $('ledger-filter').value = '';
+        $('stage-filter').value = '';
+        $('starred-only').checked = false;
+        $('archived-only').checked = false;
+        await refreshLedger();
+        const entry = document.getElementById('ledger-row-' + row.id);
+        if (!entry) { $('notice').textContent = 'This request is no longer active in the ledger.'; return; }
+        entry.open = true;
+        entry.querySelector('summary').focus();
+      };
+    }
+  } catch { add(scanResults, 'p', 'Session history could not be loaded. Check the original thread manually.'); }
+});
+$('scan-speaker').onchange = () => scanResults.replaceChildren();
+$('request').addEventListener('input', () => scanResults.replaceChildren());
+function redactContactDetails(text) {
+  return text
+    .replace(/\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+\b/gi, '[email redacted]')
+    .replace(/(?<![\w+])\+?(?:\(\d{3}\)|\d)(?:[ .-]?\d){7,14}(?!\w)/g,
+      (match, offset, source) => {
+        const digits = match.replace(/\D/g, '').length;
+        const prefix = source.slice(Math.max(0, offset - 1), offset);
+        return digits >= 10 && digits <= 15 && !/[₹$€£]/.test(prefix) ? '[phone redacted]' : match;
+      });
+}
+$('redact-request').onclick = () => run(async () => {
+  const field = $('request');
+  const redacted = redactContactDetails(field.value);
+  if (redacted === field.value) return 'No common email or phone formats found. Review the text manually.';
+  field.value = redacted;
+  saveDraft();
+  document.title = 'ScopeKeeper';
+  showEmptyReview();
+  field.disabled = false;
+  field.focus();
+  return 'Contact details masked. Review the updated text before assessing.';
+});
+async function readRequestFile(file) {
+  if (!/\.txt$/i.test(file.name) || file.size > 16003) {
+    throw Error('Choose a UTF-8 .txt file with up to 4,000 characters.');
+  }
+  let content;
+  try { content = new TextDecoder('utf-8', {fatal:true}).decode(await file.arrayBuffer()).trim(); }
+  catch { throw Error('Could not read this file as UTF-8 text.'); }
+  if (!content || content.length > 4000) throw Error('Import 1–4,000 characters.');
+  return content;
+}
+function importRequestFiles(files) {
+  if (!files.length) return;
+  return run(async () => {
+    if (files.length !== 1) throw Error('Choose or drop one .txt file at a time.');
+    $('request').value = await readRequestFile(files[0]);
+    saveDraft();
+    document.title = 'ScopeKeeper';
+    showEmptyReview();
+    $('request').disabled = false;
+    $('request').focus();
+    return 'Text loaded. Review it before clicking Assess request.';
+  });
+}
+$('request-file').onchange = event => {
+  const input = event.target;
+  const files = Array.from(input.files);
+  input.value = '';
+  return importRequestFiles(files);
+};
+function marketplaceExcerpt(platform, pasted) {
+  const headers = {
+    Upwork: /^(?:Upwork(?: Messages)?|Messages|View contract)$/i,
+    Fiverr: /^(?:Fiverr(?: Inbox)?|Inbox|View order)$/i
+  };
+  const lines = pasted.replace(/\r\n?/g, '\n').split('\n');
+  if (!Object.hasOwn(headers, platform)) throw Error('Choose Upwork or Fiverr.');
+  while (lines.length && (!lines[0].trim() || headers[platform].test(lines[0].trim()))) lines.shift();
+  const excerpt = lines.join('\n').trim();
+  if (!excerpt) throw Error('Paste a message with request text.');
+  if (excerpt.length > 4000) throw Error('Choose an excerpt of 4,000 characters or fewer.');
+  return excerpt;
+}
+$('marketplace-preview').onclick = () => {
+  const status = $('marketplace-status');
+  try {
+    $('marketplace-excerpt').value = marketplaceExcerpt($('marketplace').value, $('marketplace-paste').value);
+    status.textContent = 'Excerpt ready for review.';
+    $('marketplace-excerpt').focus();
+  } catch (error) {
+    $('marketplace-excerpt').value = '';
+    status.textContent = error.message;
+  }
+};
+$('marketplace-use').onclick = () => {
+  const text = $('marketplace-excerpt').value.trim();
+  if (!text || text.length > 4000) {
+    $('marketplace-status').textContent = 'Enter an excerpt of 1–4,000 characters.';
+    return;
+  }
+  if ($('request').value.trim() && !confirm('Replace the current client message?')) return;
+  $('request').value = text;
+  saveDraft();
+  showEmptyReview();
+  document.title = 'ScopeKeeper';
+  $('marketplace-status').textContent = 'Excerpt copied to the request editor. Assess it when ready.';
+  $('request').focus();
+};
+function whatsappExcerpt(text) {
+  const messages = [];
+  const header = /^(?:\[)?\d{1,4}[/.\-]\d{1,2}[/.\-]\d{1,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?\s*(?:\]\s*|[-–]\s*)([^:]{1,100}):\s*(.*)$/i;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/^[\u200e\u200f\u202a-\u202e]+/, '');
+    const match = line.match(header);
+    if (match) messages.push(match[1] + ': ' + match[2]);
+    else if (messages.length) messages[messages.length - 1] += '\n' + line;
+  }
+  if (!messages.length) throw Error('No WhatsApp message lines found. Export a text chat without media or paste an excerpt.');
+  return messages.join('\n').trim();
+}
+function importThread(id, extension, byteLimit, extract) {
+  $(id).onchange = event => {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    return run(async () => {
+      if (!file.name.toLowerCase().endsWith(extension) || file.size > byteLimit) {
+        throw Error('Choose a ' + extension + ' file up to ' + Math.floor(byteLimit / 1024) + ' KB.');
+      }
+      const raw = new TextDecoder('utf-8', {fatal:true}).decode(await file.arrayBuffer());
+      const thread = await extract(raw);
+      if (!thread.trim()) throw Error('No readable message text found.');
+      if ($('request').value.trim() && !confirm('Replace the current request text?')) return '';
+      const shortened = thread.length > 4000;
+      $('request').value = shortened ? thread.slice(-4000) : thread;
+      saveDraft();
+      showEmptyReview();
+      document.title = 'ScopeKeeper';
+      return shortened ? 'Loaded the last 4,000 characters. Review the excerpt before assessing.'
+        : 'Thread loaded. Review the text before assessing.';
+    });
+  };
+}
+importThread('email-import', '.eml', 12 * 1024, async raw => (await send('import/email', {email:raw})).text);
+importThread('whatsapp-import', '.txt', 512 * 1024, whatsappExcerpt);
+$('file-drop').ondragover = event => event.preventDefault();
+$('file-drop').ondrop = event => {
+  event.preventDefault();
+  return importRequestFiles(Array.from(event.dataTransfer.files));
+};
+$('compare-memory').onclick = () => {
+  if (!$('review').reportValidity()) return;
+  return run(async () => {
+    const comparison = await send('compare-memory', {request:$('request').value, hours:$('hours').value});
+    document.title = 'Memory comparison · ScopeKeeper';
+    const panel = $('result');
+    panel.replaceChildren();
+    add(panel, 'h3', 'Same request, different memory settings');
+    const grid = add(panel, 'div', '', 'grid');
+    for (const [key, heading] of [['with_memory', 'Memory on'], ['without_memory', 'Memory off']]) {
+      const group = add(grid, 'section', '', 'panel');
+      add(group, 'h4', heading);
+      const answer = comparison[key];
+      const items = answer.items || [answer];
+      add(group, 'strong', assessmentLabel(items));
+      for (const item of items) {
+        add(group, 'p', [item.item, item.verdict, item.estimate].filter(Boolean).join(' · '));
+        add(group, 'p', item.reason);
+        for (const record of item.evidence) add(group, 'p', record.date + ' · ' + record.source + ' · ' + record.text);
+      }
+    }
+    return 'Comparison shown. No ledger entry was added.';
+  });
+};
+$('review').onsubmit = event => {
+  event.preventDefault();
+  run(async () => {
+    const memoryEnabled = $('memory').checked;
+    $('result').textContent = memoryEnabled ? 'Searching project memory…' : 'Assessing without project memory…';
+    const elapsed = add($('result'), 'p', 'Elapsed: 0 s', 'source');
+    elapsed.setAttribute('aria-hidden', 'true');
+    const started = performance.now();
+    const timer = setInterval(() => {
+      const seconds = Math.floor((performance.now() - started) / 1000);
+      elapsed.textContent = 'Elapsed: ' + seconds + ' s';
+    }, 1000);
+    const skeleton = add($('result'), 'div', '');
+    skeleton.setAttribute('aria-hidden', 'true');
+    for (let index = 0; index < 3; index++) add(skeleton, 'div', '', 'skeleton');
+    try {
+      show(await send('assess', {request:$('request').value, memory:memoryEnabled, hours:$('hours').value}));
+    } catch (error) {
+      showEmptyReview();
+      throw error;
+    } finally {
+      clearInterval(timer);
+    }
+    if ($('ledger').open) await refreshLedger();
+  });
+};
+function showAmendmentStatus(statuses) {
+  $('amendment-status').textContent = Object.entries(statuses).map(([provider, status]) =>
+    provider + ': ' + (status === 'Approved' ? 'Client-confirmed approval' : status)).join(' · ');
+}
+$('approval').ontoggle = async () => {
+  if (!$('approval').open) return;
+  try {
+    const response = await fetch('/api/amendment-status', {cache:'no-store'});
+    if (!response.ok) throw Error();
+    showAmendmentStatus(await response.json());
+  } catch { $('amendment-status').textContent = 'Could not load amendment status.'; }
+};
+for (const [id, status] of [['amend-pending', 'Pending'], ['amend-declined', 'Declined']]) {
+  $(id).onclick = () => run(async () => {
+    const statuses = await send('amendment-status', {provider:$('provider').value, status});
+    showAmendmentStatus(statuses);
+    $('confirmed').checked = false;
+    return 'Proposal status updated. Approved scope is unchanged.';
+  });
+}
+$('amend').onsubmit = event => {
+  event.preventDefault();
+  run(async () => {
+    showEmptyReview();
+    await send('amend',{confirmed:$('confirmed').checked,provider:$('provider').value});
+    $('confirmed').checked = false; $('approval').open = false; $('history').open = false;
+    return 'Approval recorded. Start a New Chat to review the request again.';
+  });
+};
+$('history').ontoggle = async () => {
+  const records = $('records');
+  if (!$('history').open) { historyRows = []; records.replaceChildren(); return; }
+  if (!$('memory').checked) { records.textContent = 'Turn memory ON to browse project history.'; return; }
+  try {
+    const response = await fetch('/api/history');
+    if (!response.ok) throw Error();
+    const history = await response.json();
+    if (!$('history').open || !$('memory').checked) return;
+    historyRows = history;
+    const selector = $('scope-timeline');
+    const previous = selector.value;
+    selector.replaceChildren(new Option('All scope items', ''));
+    const topics = [...new Set(history.flatMap(record => record.scope_items))].sort();
+    for (const topic of topics) selector.add(new Option(topic));
+    if (topics.includes(previous)) selector.value = previous;
+    renderHistory();
+  } catch { records.textContent = 'Project history is unavailable.'; }
+};
+function historyThrough(records, cutoff) {
+  return cutoff ? records.filter(record => record.date <= cutoff) : records;
+}
+function renderHistory() {
+  if (!$('history').open || !$('memory').checked) return;
+  const records = $('records');
+  records.replaceChildren();
+  const query = $('history-filter').value.trim().toLowerCase();
+  const topic = $('scope-timeline').value;
+  const matches = historyThrough(historyRows, $('history-as-of').value).filter(record => (!$('pinned-history').checked || record.pinned)
+    && (!topic || record.scope_items.includes(topic))
+    && [record.date, displayDate(record.date), record.source, record.text, ...record.scope_items].join(' ').toLowerCase().includes(query));
+  add(records, 'p', matches.length + ' of ' + historyRows.length + ' records shown.', 'source');
+  for (const record of matches) {
+    const card = add(records, 'article', '', 'history-entry');
+    add(card, 'strong', (record.pinned ? '★ ' : '') + displayDate(record.date) + ' · ' + record.source);
+    add(card, 'button', record.pinned ? 'Unpin clause' : 'Pin clause', 'secondary').onclick = () => run(async () => {
+      historyRows = await send('history/pin', {source:record.source, pinned:!record.pinned});
+      renderHistory();
+      return record.pinned ? 'Clause unpinned.' : 'Clause pinned.';
+    });
+    add(card, 'p', record.scope_items.join(' · '));
+    add(card, 'p', record.text);
+    if (record.definition_checks) {
+      const checks = record.definition_checks;
+      const definition = add(card, 'details', '');
+      const score = checks.filter(([, present]) => present).length;
+      add(definition, 'summary', 'Scope definition checklist · ' + score + ' of ' + checks.length);
+      add(definition, 'p', 'Checks the fictional baseline for explicit wording. This score does not affect verdicts.');
+      const list = add(definition, 'ul', '');
+      for (const [label, present] of checks) add(list, 'li', label + ': ' + (present ? 'Documented' : 'Check with client'));
+    }
+    if (record.supersedes) {
+      const previous = historyRows.find(item => item.source === record.supersedes);
+      add(card, 'p', 'Earlier source: ' + record.supersedes + '. ' + record.supersedes_reason);
+      if (previous) {
+        const comparison = add(card, 'details', '');
+        add(comparison, 'summary', 'Read the earlier agreement');
+        add(comparison, 'p', displayDate(previous.date) + ' · ' + previous.text);
+      }
+    }
+  }
+  if (!matches.length) add(records, 'p', 'No matching records. Clear the filters or try a different search.');
+}
+function clearHistoryFilters() {
+  $('history-filter').value = '';
+  $('scope-timeline').value = '';
+  $('history-as-of').value = '';
+  $('pinned-history').checked = false;
+}
+$('clear-history-filters').onclick = () => {
+  clearHistoryFilters();
+  renderHistory();
+  $('history-filter').focus();
+};
+$('scope-timeline').onchange = renderHistory;
+$('pinned-history').onchange = renderHistory;
+$('history-filter').oninput = renderHistory;
+$('history-as-of').onchange = renderHistory;
+function bindToggle(id, element, css) {
+  $(id).onclick = () => $(id).setAttribute('aria-pressed', String(element.classList.toggle(css)));
+}
+bindToggle('font-size', document.documentElement, 'large-text');
+bindToggle('contrast', document.body, 'contrast');
+$('print').onclick = () => window.print();
+$('request').onkeydown = event => {
+  if (event.ctrlKey && event.key === 'Enter' && !event.isComposing && !busy) {
+    event.preventDefault();
+    $('review').requestSubmit();
+  }
+};
+document.addEventListener('keydown', event => {
+  if (event.altKey && event.shiftKey && event.code === 'KeyN' && !event.repeat && !busy) {
+    event.preventDefault();
+    clearChat();
+    $('request').focus();
+  }
+});
+$('theme').onclick = () => {
+  const enabled = document.body.classList.toggle('dark');
+  $('theme').setAttribute('aria-pressed', String(enabled));
+};
+function similarRequests(source, candidates) {
+  const ignored = new Set(['the','for','and','with','this','that','can','you','could','please','was','are','have','add']);
+  const terms = text => new Set((text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [])
+    .filter(word => !ignored.has(word)));
+  const sourceTerms = terms(source.request);
+  return candidates.filter(row => row.id !== source.id && !row.archived && row.request !== source.request)
+    .map(row => {
+      const target = terms(row.request);
+      const shared = [...sourceTerms].filter(term => target.has(term)).length;
+      return {row, score:shared / (sourceTerms.size + target.size - shared), shared};
+    }).filter(match => match.shared >= 2 && match.score >= 0.2)
+    .sort((a, b) => b.score - a.score).slice(0, 5);
+}
+function requestCategory(text) {
+  if (/\b(?:razorpay|stripe|checkout|payments?|pay online)\b/i.test(text)) return 'Payments';
+  if (/\b(?:whats\s*app|contact form|chat button)\b/i.test(text)) return 'Contact';
+  if (/\b(?:logo|colou?r|layout|design|redesign)\b/i.test(text)) return 'Design';
+  if (/\b(?:copywriting|text|content|wording|translation)\b/i.test(text)) return 'Content';
+  return 'Other';
+}
+function requestHeatmap(entries) {
+  const active = entries.filter(row => !row.archived);
+  const dates = [...new Set(active.map(row => row.date))].sort().slice(-14);
+  const categories = ['Payments', 'Contact', 'Design', 'Content', 'Other'];
+  const counts = new Map(categories.map(category => [category, new Map()]));
+  for (const row of active) {
+    const byDate = counts.get(requestCategory(row.request));
+    byDate.set(row.date, (byDate.get(row.date) || 0) + 1);
+  }
+  return {dates, rows:categories.map(category => ({
+    category, values:dates.map(date => counts.get(category).get(date) || 0)
+  }))};
+}
+function renderHeatmap() {
+  const target = $('heatmap-content');
+  target.replaceChildren();
+  const data = requestHeatmap(ledgerRows);
+  if (!data.dates.length) { add(target, 'p', 'No active assessments to show.'); return; }
+  const table = add(target, 'table', '');
+  add(table, 'caption', 'Active assessments by primary request type for the latest 14 recorded dates. Rechecks count as separate assessments.');
+  const header = add(add(table, 'thead', ''), 'tr', '');
+  add(header, 'th', 'Request type').scope = 'col';
+  for (const date of data.dates) add(header, 'th', displayDate(date)).scope = 'col';
+  const body = add(table, 'tbody', '');
+  for (const row of data.rows) {
+    const line = add(body, 'tr', '');
+    add(line, 'th', row.category).scope = 'row';
+    for (const count of row.values) {
+      const cell = add(line, 'td', String(count));
+      cell.dataset.activity = count >= 5 ? 'high' : count >= 3 ? 'busy' : count ? 'some' : 'none';
+    }
+  }
+}
+$('request-heatmap').ontoggle = () => {
+  if ($('request-heatmap').open) renderHeatmap();
+};
+
+function scopeHealth(entries) {
+  const counts = entries.filter(row => !row.archived).flatMap(row => row.verdicts);
+  const conclusive = counts.filter(verdict => verdict === 'Included' || verdict === 'Billable').length;
+  return {total:counts.length, conclusive, percentage:counts.length ? Math.round(conclusive * 100 / counts.length) : null};
+}
+function renderScopeHealth() {
+  const target = $('scope-health');
+  target.replaceChildren();
+  const health = scopeHealth(ledgerRows);
+  add(target, 'strong', 'Scope health · Fictional Studio');
+  if (health.percentage === null) { add(target, 'p', 'No active assessed items yet.'); return; }
+  const ring = add(target, 'div', '', 'scope-ring');
+  ring.style.setProperty('--share', health.percentage + '%');
+  ring.setAttribute('aria-hidden', 'true');
+  add(ring, 'span', health.percentage + '%');
+  add(target, 'p', health.conclusive + ' of ' + health.total
+    + ' active assessed items have a conclusive verdict. Rechecks count separately.');
+}
+function renderLedger() {
+  const target = $('ledger-items');
+  target.replaceChildren();
+  if ($('request-heatmap').open) renderHeatmap();
+  renderScopeHealth();
+  const active = ledgerRows.filter(row => !row.archived);
+  const counts = active.flatMap(row => row.verdicts);
+  const billable = counts.filter(verdict => verdict === 'Billable').length;
+  const included = counts.filter(verdict => verdict === 'Included').length;
+  $('wrap-up').textContent = 'Session summary · ' + active.length + ' active requests · '
+    + billable + ' billable items · ' + included + ' included items · '
+    + (counts.length - billable - included) + ' items need review · '
+    + (ledgerRows.length - active.length) + ' archived requests';
+  const query = $('ledger-filter').value.trim().toLowerCase();
+  const rows = ledgerRows.filter(row => row.archived === $('archived-only').checked
+    && (!$('stage-filter').value || row.stage === $('stage-filter').value
+      || ($('stage-filter').value === 'unbilled' && row.stage === 'Delivered' && row.verdicts.includes('Billable')))
+    && (!$('starred-only').checked || row.starred)
+    && [row.request, ...row.verdicts, row.stage, row.notes, row.planning.risk, ...row.planning.assumptions, ...row.tags].join(' ').toLowerCase().includes(query));
+  const order = $('ledger-order').value;
+  if (order !== 'old') rows.reverse();
+  const priority = row => row.planning.value + row.planning.urgency;
+  if (order === 'priority') rows.sort((a,b) => priority(b) - priority(a));
+  if (ledgerRows.length) add(target, 'p', rows.length + ' of ' + ledgerRows.length + ' session requests shown.', 'source');
+  if (!rows.length) add(target, 'p', ledgerRows.length
+    ? 'No matching requests. Reset the filters or try a different search.'
+    : 'No assessed requests in this session.');
+  for (const row of rows) {
+    const details = add(target, 'details', '');
+    details.id = 'ledger-row-' + row.id;
+    add(details, 'summary', (row.starred ? '★ ' : '') + displayDate(row.date) + ' · ' + row.verdicts.join(', ') + ' · ' + row.request);
+    add(details, 'button', row.archived ? 'Restore request' : 'Archive request', 'secondary').onclick = () => run(async () => {
+      const previous = row.archived;
+      const updated = await send('ledger/archive', {id:row.id, archived:!previous});
+      undoArchive = {id:row.id, archived:previous};
+      $('undo-archive').hidden = false;
+      Object.assign(row, updated);
+      renderLedger();
+      return row.archived ? 'Request archived. Use Show archived requests to restore it.' : 'Request restored to the active ledger.';
+    });
+    const history = add(details, 'details', '');
+    add(history, 'summary', 'Decision trail for this request');
+    add(history, 'p', 'Downloads include the request and cited evidence. Review the file before sharing.');
+    const checksum = add(history, 'p', '', 'source');
+    for (const [label, path, filename, mime] of [
+      ['Download evidence bundle', 'ledger/evidence', 'scopekeeper-evidence.json', 'application/json'],
+      ['Download dispute report', 'ledger/dispute', 'scopekeeper-dispute.txt', 'text/plain;charset=utf-8']
+    ]) {
+      add(history, 'button', label, 'secondary').onclick = () => run(async () => {
+        const data = await send(path, {id:row.id});
+        if (data.sha256) checksum.textContent = 'Evidence SHA-256: ' + data.sha256 + ' · Keep this separately to verify later.';
+        const content = data.report ?? JSON.stringify(data, null, 2) + '\n';
+        const url = URL.createObjectURL(new Blob([content], {type:mime}));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return 'Download started.';
+      });
+    }
+    const summaryBox = add(history, 'details', '');
+    add(summaryBox, 'summary', 'Client-friendly summary');
+    const summary = add(summaryBox, 'textarea', '');
+    summary.setAttribute('aria-label', 'Editable client-friendly summary');
+    let loaded = false;
+    summaryBox.ontoggle = () => {
+      if (!summaryBox.open || loaded) return;
+      return run(async () => {
+        const data = await send('ledger/summary', {id:row.id});
+        summary.value = data.summary;
+        loaded = true;
+      });
+    };
+    add(summaryBox, 'button', 'Copy client summary', 'secondary').onclick = async () => {
+      if (!loaded) return;
+      try {
+        await navigator.clipboard.writeText(summary.value);
+        $('notice').textContent = 'Client summary copied.';
+      } catch {
+        summary.select();
+        $('notice').textContent = 'Clipboard unavailable. Press Ctrl+C to copy the selected text.';
+      }
+    };
+    const versions = ledgerRows.filter(entry => entry.request === row.request);
+    for (const [index, version] of versions.entries()) {
+      const attempt = add(history, 'details', '');
+      attempt.open = version.id === row.id;
+      const time = new Date(version.assessed_at).toLocaleString();
+      add(attempt, 'summary', 'Assessment ' + (index + 1) + ' · ' + time + ' · '
+        + (version.memory_enabled ? 'Memory ON (' + version.memory_mode + ')' : 'Memory OFF'));
+      for (const result of version.trail) {
+        add(attempt, 'p', [result.item, result.verdict, result.estimate].filter(Boolean).join(' · '));
+        add(attempt, 'p', result.reason);
+        for (const source of result.evidence) {
+          const deciding = result.deciding === source.source ? ' · Deciding source' : ' · Context';
+          add(attempt, 'p', displayDate(source.date) + deciding + ' · ' + source.source + ' · ' + source.fact, 'source');
+          add(attempt, 'p', source.text);
+        }
+      }
+    }
+    for (const override of row.overrides) {
+      const original = row.trail[override.item];
+      add(details, 'p', 'Manual decision · ' + (original.item || 'Request') + ' · '
+        + override.verdict + ' · ' + new Date(override.recorded_at).toLocaleString());
+      add(details, 'p', override.reason);
+    }
+    if (row.archived) continue;
+    const overrideBox = add(details, 'details', '');
+    add(overrideBox, 'summary', 'Record a manual verdict');
+    add(overrideBox, 'p', 'Adds a human decision to this assessment. It does not change the agreement, scope rules, or generated estimate.');
+    const overrideItem = add(add(overrideBox, 'label', 'Assessed item '), 'select', '');
+    for (const [index, result] of row.trail.entries()) {
+      add(overrideItem, 'option', (result.item || 'Request') + ' · ' + result.verdict).value = index;
+    }
+    const overrideVerdict = add(add(overrideBox, 'label', 'Manual verdict '), 'select', '');
+    for (const verdict of ['Needs Review', 'Included', 'Billable', 'Courtesy']) add(overrideVerdict, 'option', verdict);
+    const overrideReason = add(add(overrideBox, 'label', 'Reason for manual verdict'), 'textarea', '');
+    overrideReason.maxLength = 500;
+    add(overrideBox, 'button', 'Save manual verdict', 'secondary').onclick = () => run(async () => {
+      if (!overrideReason.value.trim()) throw Error('Enter a reason before saving.');
+      const updated = await send('ledger/override', {id:row.id, item:Number(overrideItem.value),
+        verdict:overrideVerdict.value, reason:overrideReason.value});
+      Object.assign(row, updated);
+      renderLedger();
+      return 'Manual verdict recorded. The original assessment is retained.';
+    });
+    const plan = add(details, 'fieldset', '');
+    add(plan, 'legend', 'Request planning · priority ' + priority(row) + '/6');
+    const ratings = {};
+    for (const [field, label] of [['value', 'Business value'], ['urgency', 'Urgency']]) {
+      const select = add(add(plan, 'label', label + ' '), 'select', '');
+      for (const [number, caption] of ['Unrated', 'Low', 'Medium', 'High'].entries()) {
+        add(select, 'option', caption).value = number;
+      }
+      select.value = row.planning[field];
+      ratings[field] = select;
+    }
+    const risk = add(add(plan, 'label', 'Feasibility and risks'), 'textarea', '');
+    risk.maxLength = 500;
+    risk.value = row.planning.risk;
+    const assumptions = add(add(plan, 'label', 'Assumptions (one per line)'), 'textarea', '');
+    assumptions.maxLength = 2010;
+    assumptions.value = row.planning.assumptions.join('\n');
+    add(plan, 'button', 'Save request plan', 'secondary').onclick = () => run(async () => {
+      const updated = await send('ledger/plan', {id:row.id, value:Number(ratings.value.value),
+        urgency:Number(ratings.urgency.value), risk:risk.value,
+        assumptions:assumptions.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean)});
+      Object.assign(row, updated);
+      renderLedger();
+      return 'Request plan saved for this session.';
+    });
+    const stage = add(add(details, 'label', 'Workflow stage '), 'select', '');
+    for (const value of ['New', 'Quoted', 'Approved', 'Delivered', 'Billed', 'Deferred']) add(stage, 'option', value);
+    stage.value = row.stage;
+    const proof = add(add(details, 'label', 'Delivery proof or reference (optional)'), 'textarea', '');
+    proof.maxLength = 500;
+    for (const record of row.proof) add(details, 'p', displayDate(record.date) + ' · ' + record.text);
+    add(details, 'button', 'Save workflow stage', 'secondary').onclick = () => run(async () => {
+      const updated = await send('ledger/progress', {id:row.id, stage:stage.value, proof:proof.value});
+      Object.assign(row, updated);
+      renderLedger();
+      return 'Workflow stage saved. Scope verdicts are separate.';
+    });
+    const starLabel = add(details, 'label', 'Star request ');
+    const star = add(starLabel, 'input', '');
+    star.type = 'checkbox';
+    star.checked = row.starred;
+    const notes = add(add(details, 'label', 'Notes'), 'textarea', '');
+    notes.maxLength = 500;
+    notes.value = row.notes;
+    const tags = add(add(details, 'label', 'Tags (comma separated)'), 'input', '');
+    tags.value = row.tags.join(', ');
+    add(details, 'button', 'Save request details', 'secondary').onclick = () => run(async () => {
+      const updated = await send('ledger/annotate', {
+        id:row.id, starred:star.checked, notes:notes.value,
+        tags:tags.value.split(',').map(tag => tag.trim()).filter(Boolean)
+      });
+      Object.assign(row, updated);
+      renderLedger();
+      return 'Request details saved for this session.';
+    });
+    const related = add(details, 'details', '');
+    add(related, 'summary', 'Similar session requests');
+    related.ontoggle = () => {
+      if (!related.open || related.childElementCount > 1) return;
+      const results = add(related, 'div', '');
+      const matches = similarRequests(row, ledgerRows);
+      if (!matches.length) add(results, 'p', 'No similar active requests found.');
+      for (const match of matches) {
+        add(results, 'p', Math.round(match.score * 100) + '% word overlap · ' + match.row.verdicts.join(', ') + ' · ' + match.row.request);
+        add(results, 'button', 'Load similar request', 'secondary').onclick = () => {
+          clearChat();
+          $('request').value = match.row.request;
+          saveDraft();
+          $('request').focus();
+        };
+      }
+    };
+    add(details, 'button', 'New Chat and recheck with memory', 'secondary').onclick = () => {
+      if (!config || busy) return;
+      if ($('request').value && $('request').value !== row.request
+        && !confirm('Replace the current request and start a new chat?')) return;
+      clearChat();
+      $('request').value = row.request;
+      $('hours').value = row.assessed_hours ?? '';
+      $('memory').checked = true;
+      $('memory').onchange();
+      saveDraft();
+      $('request').focus();
+      $('review').requestSubmit();
+    };
+    add(details, 'button', 'Review request again', 'secondary').onclick = () => {
+      clearChat();
+      $('request').value = row.request; saveDraft();
+      $('request').focus();
+    };
+  }
+}
+$('undo-archive').onclick = () => run(async () => {
+  if (!undoArchive) return;
+  const updated = await send('ledger/archive', undoArchive);
+  ledgerRows = ledgerRows.map(row => row.id === updated.id ? updated : row);
+  undoArchive = undefined;
+  $('undo-archive').hidden = true;
+  renderLedger();
+  return 'Last archive or restore reversed.';
+});
+$('date-format').onchange = () => { renderHistory(); renderLedger(); };
+function resetLedgerFilters() {
+  $('ledger-filter').value = '';
+  $('stage-filter').value = '';
+  $('starred-only').checked = false;
+  $('archived-only').checked = false;
+  $('ledger-order').value = 'new';
+}
+$('clear-ledger-filters').onclick = () => {
+  resetLedgerFilters();
+  renderLedger();
+  $('ledger-filter').focus();
+};
+$('ledger-filter').oninput = renderLedger;
+$('ledger-order').onchange = renderLedger;
+$('starred-only').onchange = renderLedger;
+$('archived-only').onchange = renderLedger;
+$('stage-filter').onchange = renderLedger;
+async function refreshLedger() {
+  try {
+    const response = await fetch('/api/ledger');
+    if (!response.ok) throw Error();
+    ledgerRows = await response.json();
+    renderLedger();
+  } catch { $('ledger-items').textContent = 'Ledger unavailable.'; }
+}
+$('ledger').ontoggle = () => { if ($('ledger').open) return refreshLedger(); };
+const demoDialog = $('guided-demo');
+let demoSteps = [], demoStep = 0;
+function renderGuidedDemo() {
+  const step = demoSteps[demoStep];
+  const panel = $('guided-demo-step');
+  panel.replaceChildren();
+  add(panel, 'h3', 'Step ' + (demoStep + 1) + ' of ' + demoSteps.length + ' · ' + step.title);
+  add(panel, 'p', step.request);
+  add(panel, 'strong', step.result.verdict + (step.result.estimate ? ' · ' + step.result.estimate : ''));
+  add(panel, 'p', step.result.reason);
+  for (const source of step.result.evidence) {
+    add(panel, 'p', source.date + ' · ' + source.text);
+  }
+  $('demo-back').hidden = demoStep === 0;
+  $('demo-next').hidden = demoStep === demoSteps.length - 1;
+}
+$('open-demo').onclick = () => run(async () => {
+  const demo = await send('guided-demo', {});
+  demoSteps = demo.steps;
+  demoStep = 0;
+  renderGuidedDemo();
+  demoDialog.showModal();
+});
+$('demo-back').onclick = () => { if (demoStep > 0) { demoStep--; renderGuidedDemo(); } };
+$('demo-next').onclick = () => { if (demoStep < demoSteps.length - 1) { demoStep++; renderGuidedDemo(); } };
+const commandDialog = $('command-dialog');
+const commands = [
+  ['New chat', () => { clearChat(); $('request').focus(); }],
+  ['Use demo request', () => { $('sample').click(); $('request').focus(); }],
+  ['Open project history', () => { $('history').open = true; $('history').querySelector('summary').focus(); }],
+  ['Open request ledger', () => { $('ledger').open = true; $('ledger').querySelector('summary').focus(); }],
+  ['Toggle dark mode', () => { $('theme').click(); $('theme').focus(); }]
+];
+function renderCommands() {
+  const target = $('command-results');
+  target.replaceChildren();
+  const query = $('command-search').value.trim().toLowerCase();
+  const matches = commands.filter(([label]) => label.toLowerCase().includes(query));
+  for (const [label, action] of matches) {
+    add(target, 'button', label, 'secondary').onclick = () => {
+      if (busy) return;
+      commandDialog.close();
+      action();
+    };
+  }
+  if (!matches.length) add(target, 'p', 'No matching commands.');
+}
+function openCommands() {
+  if (busy || commandDialog.open) return;
+  $('command-search').value = '';
+  renderCommands();
+  commandDialog.showModal();
+  $('command-search').focus();
+}
+$('open-commands').onclick = openCommands;
+$('command-search').oninput = renderCommands;
+document.addEventListener('keydown', event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && !event.isComposing) {
+    event.preventDefault();
+    openCommands();
+  }
+});
+$('new').onclick = clearChat;
+$('sample').onclick = () => { if(config) { $('request').value = config.request; saveDraft(); } };
+$('memory').onchange = () => {
+  document.title = 'ScopeKeeper';
+  $('memory-label').textContent = $('memory').checked ? 'ON · With ScopeKeeper' : 'OFF · Without ScopeKeeper';
+  showEmptyReview();
+  $('history').open = false; $('records').replaceChildren();
+};
+$('reset').onclick = () => {
+  if (confirm('Reset this fictional demo and clear its recorded amendments?')) run(async () => {
+    await send('reset',{}); for (const form of planningForms) { form.reset(); form.dispatchEvent(new Event('input')); } undoArchive = undefined; $('undo-archive').hidden = true; ledgerRows = []; resetLedgerFilters(); clearHistoryFilters(); $('ledger').open = false; $('request-heatmap').open = false; $('heatmap-content').replaceChildren(); $('scope-health').replaceChildren(); $('ledger-items').replaceChildren(); clearChat(); $('confirmed').checked = false; $('provider').selectedIndex = 0;
+    $('approval').open = false; $('memory').checked = true; $('memory').onchange();
+    return 'Fictional demo reset.';
+  });
+};
+</script>
+</html>
